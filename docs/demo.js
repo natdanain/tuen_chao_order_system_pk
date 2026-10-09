@@ -1,17 +1,17 @@
 // Fake backend used when APP_CONFIG.GAS_URL is empty or the URL has ?demo — lets you preview the page in any browser.
 window.DemoApi = (() => {
   const menu = [
-    {id:"amr", cat:"กาแฟ", catEn:"Coffee", name:"อเมริกาโน่", nameEn:"Americano", price:65, best:0, layers:[["#2B1A10",62],["#d8ecf4",12]]},
-    {id:"lat", cat:"กาแฟ", catEn:"Coffee", name:"ลาเต้", nameEn:"Latte", price:75, best:3, layers:[["#EADBC8",42],["#8A5A3B",26]]},
-    {id:"orn", cat:"กาแฟ", catEn:"Coffee", name:"อเมริกาโน่ส้ม", nameEn:"Orange Americano", price:80, best:2, layers:[["#E58A2C",40],["#3A2416",26]], sweetOff:["0%"]},
-    {id:"pmt", cat:"มัทฉะ", catEn:"Matcha", name:"เคลียร์มัทฉะ", nameEn:"Clear Matcha", price:90, best:0, layers:[["#4F7F2A",62]]},
-    {id:"mat", cat:"มัทฉะ", catEn:"Matcha", name:"มัทฉะลาเต้", nameEn:"Matcha Latte", price:90, best:4, layers:[["#F2EFE6",30],["#6E9A47",36]]},
-    {id:"mcw", cat:"มัทฉะ", catEn:"Matcha", name:"มัทฉะน้ำมะพร้าว", nameEn:"Matcha Coconut Water", price:90, best:0, layers:[["#EEF3E8",38],["#5E8F33",28]]},
-    {id:"tht", cat:"ชา", catEn:"Tea", name:"ชาไทย", nameEn:"Thai Tea", price:59, best:0, layers:[["#E07A33",66]], sweetOff:["0%"]},
-    {id:"blt", cat:"ชา", catEn:"Tea", name:"ชาดำเย็น (ชาใส)", nameEn:"Iced Black Tea (no milk)", price:59, best:0, layers:[["#7A2E0E",60],["#d8ecf4",8]]},
-    {id:"grt", cat:"ชา", catEn:"Tea", name:"ชาเขียว", nameEn:"Green Tea", price:59, best:0, layers:[["#A3C56E",66]], sweetOff:["0%"]},
-    {id:"coa", cat:"อื่น ๆ", catEn:"Others", name:"โกโก้", nameEn:"Cocoa", price:65, best:1, layers:[["#5C3A2A",66]], sweetOff:["0%"]},
-    {id:"pnk", cat:"อื่น ๆ", catEn:"Others", name:"นมชมพู (นมเย็น)", nameEn:"Pink Milk (iced milk)", price:59, best:0, layers:[["#F4A9BE",66]], sweetOff:["0%"]},
+    {id:"amr", cat:"กาแฟ", catEn:"Coffee", name:"อเมริกาโน่", nameEn:"Americano", price:65, best:0, img:"menu/americano.jpg", layers:[["#2B1A10",62],["#d8ecf4",12]]},
+    {id:"lat", cat:"กาแฟ", catEn:"Coffee", name:"ลาเต้", nameEn:"Latte", price:75, best:3, img:"menu/latte.jpg", layers:[["#EADBC8",42],["#8A5A3B",26]]},
+    {id:"orn", cat:"กาแฟ", catEn:"Coffee", name:"อเมริกาโน่ส้ม", nameEn:"Orange Americano", price:80, best:2, img:"menu/orange-americano.jpg", layers:[["#E58A2C",40],["#3A2416",26]], sweetOff:["0%"]},
+    {id:"pmt", cat:"มัทฉะ", catEn:"Matcha", name:"เคลียร์มัทฉะ", nameEn:"Clear Matcha", price:90, best:0, img:"menu/clear-matcha.jpg", layers:[["#4F7F2A",62]]},
+    {id:"mat", cat:"มัทฉะ", catEn:"Matcha", name:"มัทฉะลาเต้", nameEn:"Matcha Latte", price:90, best:4, img:"menu/matcha-latte.jpg", layers:[["#F2EFE6",30],["#6E9A47",36]]},
+    {id:"mcw", cat:"มัทฉะ", catEn:"Matcha", name:"มัทฉะน้ำมะพร้าว", nameEn:"Matcha Coconut Water", price:90, best:0, img:"menu/matcha-coconut.jpg", layers:[["#EEF3E8",38],["#5E8F33",28]]},
+    {id:"tht", cat:"ชา", catEn:"Tea", name:"ชาไทย", nameEn:"Thai Tea", price:59, best:0, img:"menu/thai-tea.jpg", layers:[["#E07A33",66]], sweetOff:["0%"]},
+    {id:"blt", cat:"ชา", catEn:"Tea", name:"ชาดำเย็น (ชาใส)", nameEn:"Iced Black Tea (no milk)", price:59, best:0, img:"menu/black-tea.jpg", layers:[["#7A2E0E",60],["#d8ecf4",8]]},
+    {id:"grt", cat:"ชา", catEn:"Tea", name:"ชาเขียว", nameEn:"Green Tea", price:59, best:0, img:"menu/green-tea.jpg", layers:[["#A3C56E",66]], sweetOff:["0%"]},
+    {id:"coa", cat:"อื่น ๆ", catEn:"Others", name:"โกโก้", nameEn:"Cocoa", price:65, best:1, img:"menu/cocoa.jpg", layers:[["#5C3A2A",66]], sweetOff:["0%"]},
+    {id:"pnk", cat:"อื่น ๆ", catEn:"Others", name:"นมชมพู (นมเย็น)", nameEn:"Pink Milk (iced milk)", price:59, best:0, img:"menu/pink-milk.jpg", layers:[["#F4A9BE",66]], sweetOff:["0%"]},
   ];
   const cfg = {
     shopName:"ตื่นเช้า", shopSub:"TUEN_CHAO · Home Cafe",

@@ -53,17 +53,17 @@ const DEFAULT_SETTINGS = [
 
 const SEED = {
   Menu: [
-    ['amr', 'กาแฟ', 'อเมริกาโน่', 65, '', '#2B1A10:62|#d8ecf4:12', '', true, '', 'Americano', 'Coffee'],
-    ['lat', 'กาแฟ', 'ลาเต้', 75, 3, '#EADBC8:42|#8A5A3B:26', '', true, '', 'Latte', 'Coffee'],
-    ['orn', 'กาแฟ', 'อเมริกาโน่ส้ม', 80, 2, '#E58A2C:40|#3A2416:26', '', true, '0%', 'Orange Americano', 'Coffee'],
-    ['pmt', 'มัทฉะ', 'เคลียร์มัทฉะ', 90, '', '#4F7F2A:62', '', true, '', 'Clear Matcha', 'Matcha'],
-    ['mat', 'มัทฉะ', 'มัทฉะลาเต้', 90, 4, '#F2EFE6:30|#6E9A47:36', '', true, '', 'Matcha Latte', 'Matcha'],
-    ['mcw', 'มัทฉะ', 'มัทฉะน้ำมะพร้าว', 90, '', '#EEF3E8:38|#5E8F33:28', '', true, '', 'Matcha Coconut Water', 'Matcha'],
-    ['tht', 'ชา', 'ชาไทย', 59, '', '#E07A33:66', '', true, '0%', 'Thai Tea', 'Tea'],
-    ['blt', 'ชา', 'ชาดำเย็น (ชาใส)', 59, '', '#7A2E0E:60|#d8ecf4:8', '', true, '', 'Iced Black Tea (no milk)', 'Tea'],
-    ['grt', 'ชา', 'ชาเขียว', 59, '', '#A3C56E:66', '', true, '0%', 'Green Tea', 'Tea'],
-    ['coa', 'อื่น ๆ', 'โกโก้', 65, 1, '#5C3A2A:66', '', true, '0%', 'Cocoa', 'Others'],
-    ['pnk', 'อื่น ๆ', 'นมชมพู (นมเย็น)', 59, '', '#F4A9BE:66', '', true, '0%', 'Pink Milk (iced milk)', 'Others'],
+    ['amr', 'กาแฟ', 'อเมริกาโน่', 65, '', '#2B1A10:62|#d8ecf4:12', 'https://natdanain.github.io/tuen_chao_order_system_pk/menu/americano.jpg', true, '', 'Americano', 'Coffee'],
+    ['lat', 'กาแฟ', 'ลาเต้', 75, 3, '#EADBC8:42|#8A5A3B:26', 'https://natdanain.github.io/tuen_chao_order_system_pk/menu/latte.jpg', true, '', 'Latte', 'Coffee'],
+    ['orn', 'กาแฟ', 'อเมริกาโน่ส้ม', 80, 2, '#E58A2C:40|#3A2416:26', 'https://natdanain.github.io/tuen_chao_order_system_pk/menu/orange-americano.jpg', true, '0%', 'Orange Americano', 'Coffee'],
+    ['pmt', 'มัทฉะ', 'เคลียร์มัทฉะ', 90, '', '#4F7F2A:62', 'https://natdanain.github.io/tuen_chao_order_system_pk/menu/clear-matcha.jpg', true, '', 'Clear Matcha', 'Matcha'],
+    ['mat', 'มัทฉะ', 'มัทฉะลาเต้', 90, 4, '#F2EFE6:30|#6E9A47:36', 'https://natdanain.github.io/tuen_chao_order_system_pk/menu/matcha-latte.jpg', true, '', 'Matcha Latte', 'Matcha'],
+    ['mcw', 'มัทฉะ', 'มัทฉะน้ำมะพร้าว', 90, '', '#EEF3E8:38|#5E8F33:28', 'https://natdanain.github.io/tuen_chao_order_system_pk/menu/matcha-coconut.jpg', true, '', 'Matcha Coconut Water', 'Matcha'],
+    ['tht', 'ชา', 'ชาไทย', 59, '', '#E07A33:66', 'https://natdanain.github.io/tuen_chao_order_system_pk/menu/thai-tea.jpg', true, '0%', 'Thai Tea', 'Tea'],
+    ['blt', 'ชา', 'ชาดำเย็น (ชาใส)', 59, '', '#7A2E0E:60|#d8ecf4:8', 'https://natdanain.github.io/tuen_chao_order_system_pk/menu/black-tea.jpg', true, '', 'Iced Black Tea (no milk)', 'Tea'],
+    ['grt', 'ชา', 'ชาเขียว', 59, '', '#A3C56E:66', 'https://natdanain.github.io/tuen_chao_order_system_pk/menu/green-tea.jpg', true, '0%', 'Green Tea', 'Tea'],
+    ['coa', 'อื่น ๆ', 'โกโก้', 65, 1, '#5C3A2A:66', 'https://natdanain.github.io/tuen_chao_order_system_pk/menu/cocoa.jpg', true, '0%', 'Cocoa', 'Others'],
+    ['pnk', 'อื่น ๆ', 'นมชมพู (นมเย็น)', 59, '', '#F4A9BE:66', 'https://natdanain.github.io/tuen_chao_order_system_pk/menu/pink-milk.jpg', true, '0%', 'Pink Milk (iced milk)', 'Others'],
   ],
   // code, amount, label, newCustomerOnly, maxUses, used, active, labelEn, minCups, startDate, endDate, perCustomer, banner
   Codes: [
