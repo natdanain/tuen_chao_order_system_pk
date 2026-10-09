@@ -446,7 +446,7 @@ function render(){
   const room = roomEnabled();
   $("#app").innerHTML = `
   <div class="liffbar"><div class="logo">${logoSvg()}</div><div class="t"><b>${esc(C.shopName)}</b><small>${esc(S.cust.name?t("hello", S.cust.name):shopSub())}</small></div><div class="tools">${DEMO?`<span class="demo">${t("demo")}</span>`:''}${langBtn()}</div></div>
-  <img class="hero" src="brand/banner.webp" alt="TUEN_CHAO ตื่นเช้า" width="1532" height="661">
+  <img class="hero" src="brand/banner-v2.jpg" alt="TUEN_CHAO ตื่นเช้า — ลาเต้ มัทฉะลาเต้ และโกโก้" width="1532" height="661">
   <nav class="tabs">${[["round",t("tabRound")],...(best.length?[["best",t("tabBest")]]:[]),["menu",t("tabMenu")],["checkout",t("tabCheckout")]].map(([id,label])=>`<a href="#${id}" class="${S.tab===id?'on':''}" data-tab="${id}">${label}</a>`).join("")}</nav>
   ${C.acceptingOrders?'':`<div class="banner">${esc(closedMsg())}</div>`}
   ${(C.codeBanners||[]).map(b=>`<div class="promo"><div>🎉 <b>${esc(codeLabel(b))}</b><small>${esc(t("useCode", b.code))}${b.end?' · '+esc(t("codeUntil", fmtDay(b.end))):''}</small></div>${S.applied&&S.applied.code===b.code?'':`<button class="promo-use" data-usecode="${esc(b.code)}">${t("applyThis")}</button>`}</div>`).join("")}
