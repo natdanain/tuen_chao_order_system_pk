@@ -35,11 +35,17 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .liffbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin-inline:-16px;padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
 .logo{width:38px;height:38px;border-radius:10px;background:var(--brand);display:grid;place-items:center;flex:none}
 .logo svg{width:30px;height:auto}
-.hero{display:block;width:calc(100% + 32px);height:auto;max-width:none;margin-inline:-16px;aspect-ratio:1150/382;object-fit:cover;background:var(--brand)}
+.hero{display:block;width:calc(100% + 32px);height:auto;max-width:none;margin-inline:-16px;aspect-ratio:1532/661;object-fit:cover;background:var(--brand)}
+.na{opacity:.5}
+.na .add{background:var(--line);color:var(--muted);cursor:not-allowed}
+.na-tag{font-size:12px;color:var(--danger)}
 .liffbar .t{min-width:0}
 .liffbar b{font-family:var(--f-display);font-weight:500;display:block;font-size:16px}
 .liffbar small{color:var(--muted);font-size:12px}
-.demo{margin-left:auto;font-size:11px;letter-spacing:.06em;color:var(--caramel);border:1px solid var(--caramel);padding:2px 8px;border-radius:99px;white-space:nowrap}
+.tools{margin-left:auto;display:flex;align-items:center;gap:8px}
+.lang{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:4px 12px;font-size:13px;font-weight:600;white-space:nowrap}
+.room{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.demo{font-size:11px;letter-spacing:.06em;color:var(--caramel);border:1px solid var(--caramel);padding:2px 8px;border-radius:99px;white-space:nowrap}
 
 .tabs{display:flex;gap:18px;padding-block:12px 4px;border-bottom:1px solid var(--line);overflow-x:auto}
 .tabs a{color:var(--muted);text-decoration:none;padding-bottom:8px;white-space:nowrap;font-size:14px}
@@ -121,6 +127,18 @@ textarea{resize:vertical;min-height:64px}
 .bar .err{max-width:448px;margin:0 auto 8px;font-size:13px}
 .cta{border:0;border-radius:14px;background:var(--pandan);color:#fff;padding:13px 22px;font-family:var(--f-display);font-size:16px}
 .cta:disabled{opacity:.4;cursor:not-allowed}
+.invalid{border-color:var(--danger)!important;box-shadow:0 0 0 1px var(--danger)}
+.slots.invalid,.chips.invalid{border:1px solid var(--danger);border-radius:14px;padding:6px}
+.sheet-bg.dlg-bg{align-items:center;padding:16px}
+.dlg{background:var(--surface);width:100%;max-width:340px;border-radius:18px;padding:20px 18px}
+.dlg h3{font-size:18px;color:var(--danger)}
+.dlg ul{margin:10px 0 16px;padding-left:20px;line-height:1.8}
+.promo{display:flex;align-items:center;gap:10px;margin-top:12px;background:color-mix(in srgb,var(--brand) 22%,var(--surface));border:1px solid var(--brand);border-radius:12px;padding:10px 12px;font-size:14px}
+.promo small{display:block;color:var(--muted);font-size:12px}
+.promo>div{flex:1;min-width:0}
+.promo-use{flex:none;border:0;border-radius:99px;background:var(--roast);color:var(--bg);padding:6px 12px;font-size:13px}
+.promo-hint{color:var(--caramel);font-size:13px}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.6}
 
 .sheet-bg{position:fixed;inset:0;background:rgba(20,12,8,.45);z-index:10;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--surface);width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:20px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:88%;overflow:auto}
@@ -172,10 +190,124 @@ const DEMO = !CFG.GAS_URL || new URLSearchParams(location.search).has("demo");
 let C = null;        // shop config from the backend: menu, days/slots, options
 let idToken = null;  // LIFF ID token, verified by the backend on every call
 
+// ---------- language ----------
+// The sheet stores Thai; English only changes what the customer reads.
+// Values sent to the backend (location, drop option, extras…) are always the Thai ones.
+const T = {
+  th: {
+    title:"สั่งเครื่องดื่ม", loading:"กำลังเปิดร้าน…", retry:"ลองใหม่", demo:"ตัวอย่าง",
+    netErr:"เชื่อมต่อร้านไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่", badResp:"ร้านตอบกลับผิดพลาด ลองใหม่อีกครั้ง", genericErr:"เกิดข้อผิดพลาด",
+    noOpenid:"LIFF ยังไม่ได้เปิดสิทธิ์ openid (ตั้งค่าใน LINE Developers)",
+    hello:n=>`สวัสดีคุณ ${n}`,
+    tabRound:"รอบส่ง", tabBest:"ขายดีที่สุด", tabMenu:"เมนูทั้งหมด", tabCheckout:"ยืนยันออเดอร์",
+    whenTitle:"วันและเวลาส่ง", deliver:"จัดส่ง", pickup:"รับที่ร้าน", today:"วันนี้", advance:"สั่งล่วงหน้า",
+    asapDeliver:"ส่งทันทีที่เครื่องดื่มพร้อม", asapPickup:"มารับได้เมื่อร้านทักไลน์", noTime:"ไม่ต้องเลือกเวลา",
+    until:t=>`สั่งได้ถึง ${t} น.`, opensAt:t=>`เปิดรับ ${t} น.`, closedToday:"ปิดรับวันนี้แล้ว",
+    slotClosed:"ปิดรับแล้ว", slotFull:"เต็มแล้ว", left:n=>`เหลือ ${n} แก้ว`, time:t=>`${t} น.`,
+    orderBy:t=>`สั่งก่อน ${t} น.`, preorderOnly:"สั่งล่วงหน้าเท่านั้น",
+    codeUntil:d=>`ถึง ${d}`, useCode:c=>`ใส่โค้ด ${c}`, applyThis:"ใช้โค้ดนี้", codeNeedCups:(c,n)=>`โค้ด ${c} ต้องซื้อครบ ${n} แก้ว (เพิ่มอีก ${n-count()} แก้ว)`,
+    missTitle:"ยังกรอกข้อมูลไม่ครบ", ok:"ตกลง", missFloor:"กรอกชั้น", missRoomNo:"กรอกเลขห้อง", badPhone:"เบอร์โทรไม่ถูกต้อง (10 หลัก ขึ้นต้นด้วย 0)",
+    noDays:"ช่วงนี้ยังไม่มีรอบเปิดรับ", place:"สถานที่ส่ง", choosePlace:"— เลือกสถานที่ —", dropTitle:"วิธีส่ง",
+    floor:"ชั้น", room:"ห้อง", floorPh:"เช่น 5", roomPh:"เช่น 512", roomText:(f,r)=>`ชั้น ${f} ห้อง ${r}`,
+    locNote:"จุดรับเพิ่มเติม", locNotePh:"เช่น ห้อง 204 / ชั้น 2 หน้าลิฟต์",
+    pickupHintAsap:"ร้านจะทักไลน์เมื่อเครื่องดื่มพร้อม", pickupHint:"มารับที่ร้านตามเวลาที่เลือก ร้านจะทักไลน์เมื่อเครื่องดื่มพร้อม",
+    rank:i=>`อันดับ ${i}`, na:"ไม่พร้อมให้บริการ", add:n=>`เพิ่ม ${n}`,
+    contactTitle:"ติดต่อ & ชำระเงิน", phone:"เบอร์โทร", phoneHint:"ถ้าหาที่ส่งไม่เจอ ร้านจะโทรหาเบอร์นี้",
+    code:"โค้ดส่วนลด", codePh:"ใส่โค้ด (ถ้ามี)", codeRemove:"ยกเลิก", codeChecking:"กำลังตรวจ…", codeApply:"ใช้โค้ด", codeEmpty:"กรอกโค้ดก่อนกดใช้",
+    stamps:"บัตรสะสมแต้ม", stampLine:(s,g)=>`${s}/${g} แก้ว · ครบ ${g} แก้วรับฟรี 1 แก้ว`, useFree:n=>`ใช้สิทธิ์แก้วฟรี (มี ${n} สิทธิ์)`, useFreeHint:"ฟรีแก้วที่แพงที่สุด",
+    pay:"ชำระเงิน", promptpay:"โอนพร้อมเพย์", cash:"เงินสดปลายทาง", cashLocked:"ออเดอร์แรกชำระผ่านพร้อมเพย์ก่อน ครั้งถัดไปเลือกเงินสดปลายทางได้", payBoth:"เลือกได้ทั้งสองแบบ",
+    note:"ฝากถึงร้าน", optional:"ไม่บังคับ",
+    summary:"สรุปรายการ", empty:"ยังไม่มีเครื่องดื่มในตะกร้า กด + ที่เมนูด้านบน", less:"ลด", more:"เพิ่ม",
+    sumDeliver:"ส่ง", sumPickup:"รับ", asapShort:"เร็วที่สุด", noSlot:"ยังไม่เลือกรอบ", where:"สถานที่",
+    fee:"ค่าส่ง", free:"ฟรี", discount:"ส่วนลด", freeCup:"แก้วฟรี", total:"ยอดชำระ", cups:n=>`${n} แก้ว`,
+    submit:"สั่งเครื่องดื่ม", sending:"กำลังส่ง…",
+    missClosed:"ร้านปิดรับชั่วคราว", missCart:"ยังไม่ได้เลือกเครื่องดื่ม", missDay:"วันนี้ปิดรับแล้ว", missSlot:"ยังไม่ได้เลือกรอบ",
+    missPlace:"ยังไม่ได้เลือกสถานที่ส่ง", missPhone:"กรอกเบอร์โทรด้วยนะ",
+    slotGone:"รอบที่เลือกปิดรับแล้ว เลือกรอบใหม่อีกครั้ง", itemsGone:"บางเมนูไม่พร้อมให้บริการแล้ว เอาออกจากตะกร้าให้แล้ว",
+    sweet:"ความหวาน", sweetReq:"จำเป็น · เลือก 1 อย่าง", rec:"แนะนำ", sweetNa:"ไม่มีสำหรับเมนูนี้",
+    extras:"เพิ่มเติม", itemNote:"หมายเหตุถึงร้าน", itemNotePh:"เช่น น้ำแข็งน้อย", cancel:"ยกเลิก", addCart:"ใส่ตะกร้า",
+    thanks:"ขอบคุณที่สั่งนะคะ ☕ ร้านได้รับออเดอร์แล้ว ใบสั่งซื้อส่งเข้าแชท LINE ของร้านด้วย",
+    order:"ใบสั่งซื้อ", when:"รอบ", subtotal:"ยอดรวม", baht:n=>`${n} บาท`,
+    scan:n=>`สแกนจ่ายพร้อมเพย์ ${n} บาท<br>แล้วส่งสลิปในแชทร้านได้เลย`, qrAlt:n=>`QR พร้อมเพย์ ${n} บาท`,
+    nothingToPay:"ไม่มียอดที่ต้องชำระ", cashPay:"ชำระเงินสดตอนรับเครื่องดื่ม", payLater:"ร้านจะส่งช่องทางชำระเงินให้ในแชท",
+    stampDone:(s,g)=>`บัตรสะสมแต้ม: ${s}/${g} แก้ว`, freeLeft:n=>`· 🎁 มีสิทธิ์แก้วฟรี ${n} แก้ว`, collect:g=>`ครบ ${g} แก้วรับฟรี 1 แก้ว`,
+    backChat:"กลับไปที่แชท", again:"สั่งอีกรอบ", confirmMsg:no=>`ยืนยันออเดอร์ ${no}`,
+  },
+  en: {
+    title:"Order drinks", loading:"Opening the shop…", retry:"Try again", demo:"Demo",
+    netErr:"Can't reach the shop. Check your internet and try again.", badResp:"The shop sent a bad response. Please try again.", genericErr:"Something went wrong",
+    noOpenid:"The LIFF app doesn't have the openid scope (set it in LINE Developers)",
+    hello:n=>`Hi ${n}`,
+    tabRound:"Delivery", tabBest:"Best sellers", tabMenu:"Menu", tabCheckout:"Checkout",
+    whenTitle:"Delivery date & time", deliver:"Delivery", pickup:"Pick up", today:"Today", advance:"Pre-order",
+    asapDeliver:"Delivered as soon as it's ready", asapPickup:"Pick up when we message you", noTime:"No need to pick a time",
+    until:t=>`Order until ${t}`, opensAt:t=>`Opens at ${t}`, closedToday:"Closed for today",
+    slotClosed:"Closed", slotFull:"Full", left:n=>`${n} left`, time:t=>t,
+    orderBy:t=>`Order by ${t}`, preorderOnly:"Pre-order only",
+    codeUntil:d=>`until ${d}`, useCode:c=>`Use code ${c}`, applyThis:"Use this code", codeNeedCups:(c,n)=>`Code ${c} needs ${n} drinks (add ${n-count()} more)`,
+    missTitle:"A few things are missing", ok:"OK", missFloor:"Enter your floor", missRoomNo:"Enter your room number", badPhone:"Invalid phone number (10 digits starting with 0)",
+    noDays:"No delivery times available right now", place:"Deliver to", choosePlace:"— Choose a place —", dropTitle:"Delivery option",
+    floor:"Floor", room:"Room", floorPh:"e.g. 5", roomPh:"e.g. 512", roomText:(f,r)=>`Floor ${f}, Room ${r}`,
+    locNote:"Delivery note", locNotePh:"e.g. Room 204, 2nd floor by the lift",
+    pickupHintAsap:"We'll message you on LINE when your drinks are ready", pickupHint:"Pick up at the time you chose. We'll message you on LINE when it's ready",
+    rank:i=>`#${i}`, na:"Not available", add:n=>`Add ${n}`,
+    contactTitle:"Contact & payment", phone:"Phone", phoneHint:"We'll call this number if we can't find you",
+    code:"Discount code", codePh:"Enter a code (optional)", codeRemove:"Remove", codeChecking:"Checking…", codeApply:"Apply", codeEmpty:"Enter a code first",
+    stamps:"Stamp card", stampLine:(s,g)=>`${s}/${g} · collect ${g} for 1 free drink`, useFree:n=>`Use a free drink (${n} left)`, useFreeHint:"Your most expensive drink is free",
+    pay:"Payment", promptpay:"PromptPay transfer", cash:"Cash on delivery", cashLocked:"Please pay your first order by PromptPay. Cash is available from your next order.", payBoth:"Either option is fine",
+    note:"Note to the shop", optional:"Optional",
+    summary:"Order summary", empty:"Your cart is empty. Tap + on a drink above.", less:"Less", more:"More",
+    sumDeliver:"Delivery", sumPickup:"Pick-up", asapShort:"As soon as ready", noSlot:"No time chosen", where:"Deliver to",
+    fee:"Delivery fee", free:"Free", discount:"Discount", freeCup:"free drink", total:"Total", cups:n=>`${n} drink${n===1?"":"s"}`,
+    submit:"Place order", sending:"Sending…",
+    missClosed:"The shop is closed right now", missCart:"No drinks chosen yet", missDay:"Closed for today", missSlot:"Choose a delivery time",
+    missPlace:"Choose a delivery place", missPhone:"Enter your phone number",
+    slotGone:"That time is now closed. Please choose another.", itemsGone:"Some drinks are no longer available and were removed from your cart.",
+    sweet:"Sweetness", sweetReq:"Required · choose 1", rec:"Recommended", sweetNa:"Not for this drink",
+    extras:"Extras", itemNote:"Note", itemNotePh:"e.g. less ice", cancel:"Cancel", addCart:"Add to cart",
+    thanks:"Thank you ☕ We've got your order. A receipt has also been sent to our LINE chat.",
+    order:"Order", when:"Time", subtotal:"Subtotal", baht:n=>`${n} THB`,
+    scan:n=>`Scan to pay ${n} THB with PromptPay<br>then send the slip in our chat`, qrAlt:n=>`PromptPay QR ${n} THB`,
+    nothingToPay:"Nothing to pay", cashPay:"Pay cash when you receive your drinks", payLater:"We'll send payment details in the chat",
+    stampDone:(s,g)=>`Stamp card: ${s}/${g}`, freeLeft:n=>`· 🎁 ${n} free drink(s)`, collect:g=>`Collect ${g} for 1 free drink`,
+    backChat:"Back to chat", again:"Order again", confirmMsg:no=>`Confirm order ${no}`,
+  },
+};
+let LANG = (()=>{
+  try{ const v=localStorage.getItem("lang"); if(v==="th"||v==="en") return v; }catch(_){}
+  return (navigator.language||"th").toLowerCase().startsWith("th") ? "th" : "en";
+})();
+let langChosen = (()=>{ try{ return !!localStorage.getItem("lang"); }catch(_){ return false; } })();
+const t = (k,...a)=>{ const v=T[LANG][k]; return typeof v==="function"? v(...a) : v; };
+function setLang(l){
+  LANG = l; langChosen = true;
+  try{ localStorage.setItem("lang", l); }catch(_){}
+  document.documentElement.lang = l;
+  if(C) document.title = C.shopName + " " + t("title");
+}
+
+// shop data in the chosen language (falls back to Thai when no English is set)
+const en = ()=>LANG==="en" && C.en ? C.en : null;
+const pick = (list, enList, v)=>{ const i=list.indexOf(v); return (en() && enList && enList[i]) || v; };
+const mName = m=>(LANG==="en" && m.nameEn) || m.name;
+const catName = c=>(LANG==="en" && (C.menu.find(m=>m.cat===c)||{}).catEn) || c;
+const locName = l=>pick(C.locations, en()&&en().locations, l);
+const dropName = d=>pick(C.dropOptions, en()&&en().dropOptions, d);
+const extraName = n=>pick(C.extras.map(e=>e[0]), en()&&en().extras, n);
+const shopSub = ()=>(en() && en().shopSub) || C.shopSub;
+const closedMsg = ()=>(en() && en().closedMessage) || C.closedMessage;
+const fmtDay = date=>{ const [y,m,d]=date.split("-").map(Number); return new Date(y,m-1,d).toLocaleDateString(LANG==="th"?"th-TH":"en-GB",{weekday:"short",day:"numeric",month:"short"}); };
+const dayRel = d=>d.rel==="วันนี้" ? t("today") : t("advance");
+const dayNote = d=>d.reason==="over" ? t("closedToday") : d.reason==="notYet" ? t("opensAt", d.openTime) : d.lastOrder ? t("until", d.lastOrder) : "";
+const slotNote = x=>!x.open ? t(x.reason==="full"?"slotFull":x.reason==="preorder"?"preorderOnly":"slotClosed")
+  : [x.left!=null ? t("left", x.left) : "", x.orderBy ? t("orderBy", x.orderBy) : ""].filter(Boolean).join(" · ");
+
 const S = {
-  mode:"deliver", day:0, slot:null, loc:"", drop:"", locNote:"", phone:"", note:"",
+  mode:"deliver", day:0, slot:null, loc:"", drop:"", floor:"", room:"", locNote:"", phone:"", note:"",
   code:"", applied:null, codeErr:"", codeBusy:false, pay:"promptpay", useFree:false,
   cart:[], tab:"round", sheet:null, done:null, busy:false, err:"",
+  popup:null,   // list of missing fields shown after tapping "order" too early
+  tried:false,  // after the first order attempt, outline the fields still missing
   cust:{name:"", orders:0, stamps:0, freeCups:0}
 };
 const $ = s=>document.querySelector(s);
@@ -185,10 +317,19 @@ const glass = m=>{
   if(m.img) return `<div class="glassbox"><img src="${esc(m.img)}" alt="" loading="lazy"></div>`;
   let b=0; return `<div class="glassbox"><div class="glass">${m.layers.map(([c,h])=>{const s=`<i style="background:${esc(c)};bottom:${b}%;height:${h}%"></i>`;b+=h;return s}).join("")}</div></div>`;
 };
+// menu rows unticked in the sheet stay listed, greyed out
+const isAvail = m=>m.available!==false;
+const naClass = m=>isAvail(m)?'':'na';
+const priceOrNa = (m,tag)=>isAvail(m)?`<${tag} class="price">${baht(m.price)}</${tag}>`:`<${tag} class="na-tag">${t("na")}</${tag}>`;
+const addBtn = m=>`<button class="add" data-add="${esc(m.id)}" ${isAvail(m)?'':'disabled'} aria-label="${esc(t("add", mName(m)))}">+</button>`;
 const lineTotal = l=>(l.m.price + l.extras.reduce((a,e)=>a+e[1],0))*l.qty;
 const subtotal = ()=>S.cart.reduce((a,l)=>a+lineTotal(l),0);
 const freeDisc = ()=>S.useFree && S.cust.freeCups>0 && S.cart.length ? Math.max(...S.cart.map(l=>l.m.price)) : 0;
-const discount = ()=>Math.min(subtotal(), freeDisc() + (S.applied? S.applied.amount : 0));
+// discount code: checked by the backend on "use" and again when ordering (once-per-customer rules live there)
+const codeShort = ()=>S.applied && count() < (S.applied.minCups||1);
+const codeDisc = ()=>S.applied && !codeShort() ? S.applied.amount : 0;
+const codeLabel = c=>(LANG==="en" && c.labelEn) || c.label;
+const discount = ()=>Math.min(subtotal(), freeDisc() + codeDisc());
 const fee = ()=>S.mode==="deliver"? C.deliveryFee : 0;
 const total = ()=>Math.max(0, subtotal()-discount()+fee());
 const count = ()=>S.cart.reduce((a,l)=>a+l.qty,0);
@@ -198,43 +339,58 @@ const phoneOk = ()=>/^0\d{8,9}$/.test(S.phone.replace(/\D/g,""));
 const dayOpen = d=>d.asap? d.open : d.slots.some(x=>x.open);
 const roomRequired = ()=>S.mode==="deliver" && C.roomRequiredFor.includes(S.drop);
 const roomEnabled = ()=>!C.dropOptions.length || roomRequired(); // e.g. food locker → no room number
-function missing(){
-  const day = C.days[S.day];
-  if(!C.acceptingOrders) return "ร้านปิดรับชั่วคราว";
-  if(!S.cart.length) return "ยังไม่ได้เลือกเครื่องดื่ม";
-  if(!day || !dayOpen(day)) return "วันนี้ปิดรับแล้ว";
-  if(!day.asap && !S.slot) return "ยังไม่ได้เลือกรอบ";
-  if(S.mode==="deliver" && !S.loc) return "ยังไม่ได้เลือกสถานที่ส่ง";
-  if(roomRequired() && !S.locNote.trim()) return "กรอกเลขห้องด้วยนะ";
-  if(!phoneOk()) return "กรอกเบอร์โทรด้วยนะ";
-  return "";
+// What gets saved as the room / delivery note (always Thai wording for the shop)
+function locNoteValue(){
+  if(S.mode!=="deliver" || !roomEnabled()) return "";
+  if(C.dropOptions.length) return `ชั้น ${S.floor.trim()} ห้อง ${S.room.trim()}`;
+  return S.locNote.trim();
 }
+// Everything still needed before ordering, in page order; `el` is where to jump to.
+function missingList(){
+  if(!C.acceptingOrders) return [{msg:t("missClosed")}];
+  const day = C.days[S.day], L = [];
+  if(!day || !dayOpen(day)) L.push({msg:t("missDay"), el:"#round .chips"});
+  else if(!day.asap && !S.slot) L.push({msg:t("missSlot"), el:"#round .slots"});
+  if(S.mode==="deliver" && !S.loc) L.push({msg:t("missPlace"), el:"#loc"});
+  if(roomRequired()){
+    if(!S.floor.trim()) L.push({msg:t("missFloor"), el:"#floor"});
+    if(!S.room.trim()) L.push({msg:t("missRoomNo"), el:"#room"});
+  }
+  if(!S.cart.length) L.push({msg:t("missCart"), el:"#menu"});
+  else if(codeShort()) L.push({msg:t("codeNeedCups", S.applied.code, S.applied.minCups), el:"#menu"});
+  if(!phoneOk()) L.push({msg:S.phone.trim()?t("badPhone"):t("missPhone"), el:"#phone"});
+  return L;
+}
+const missing = ()=>(missingList()[0]||{}).msg || "";
 const ready = ()=>!missing() && !S.busy;
 
 // ---------- backend ----------
 async function api(action, data={}){
-  if(DEMO) return window.DemoApi(action, data);
+  if(DEMO) return window.DemoApi(action, {...data, lang:LANG});
   let res;
-  try{ res = await fetch(CFG.GAS_URL, {method:"POST", body:JSON.stringify({action, idToken, ...data})}); }
-  catch(_){ throw new Error("เชื่อมต่อร้านไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่"); }
-  const j = await res.json().catch(()=>({ok:false, error:"ร้านตอบกลับผิดพลาด ลองใหม่อีกครั้ง"}));
-  if(!j.ok) throw new Error(j.error || "เกิดข้อผิดพลาด");
+  try{ res = await fetch(CFG.GAS_URL, {method:"POST", body:JSON.stringify({action, idToken, lang:LANG, ...data})}); }
+  catch(_){ throw new Error(t("netErr")); }
+  const j = await res.json().catch(()=>({ok:false, error:t("badResp")}));
+  if(!j.ok) throw new Error(j.error || t("genericErr"));
   return j;
 }
 
 async function boot(){
-  renderState("กำลังเปิดร้าน…", true);
+  document.documentElement.lang = LANG;
+  renderState(t("loading"), true);
   try{
     if(!DEMO){
       await liff.init({liffId:CFG.LIFF_ID, withLoginOnExternalBrowser:true});
       if(!liff.isLoggedIn()){ liff.login({redirectUri:location.href}); return; }
+      if(!langChosen) LANG = (liff.getLanguage()||"th").toLowerCase().startsWith("th") ? "th" : "en";
+      document.documentElement.lang = LANG;
       idToken = liff.getIDToken();
-      if(!idToken) throw new Error("LIFF ยังไม่ได้เปิดสิทธิ์ openid (ตั้งค่าใน LINE Developers)");
+      if(!idToken) throw new Error(t("noOpenid"));
     }
     const r = await api("init");
     applyConfig(r.config);
     applyCustomer(r.customer);
-    document.title = C.shopName + " สั่งเครื่องดื่ม";
+    document.title = C.shopName + " " + t("title");
     render();
   }catch(e){
     renderState(e.message || String(e), false, true);
@@ -247,7 +403,7 @@ function applyConfig(cfg){
   if(!C.days[S.day] || (!dayOpen(C.days[S.day]) && firstOpen>=0)) S.day = Math.max(0, firstOpen);
   const d = C.days[S.day];
   if(S.slot && (!d || d.asap || !d.slots.some(x=>x.time===S.slot && x.open))){
-    if(d && !d.asap) S.err = S.err || "รอบที่เลือกปิดรับแล้ว เลือกรอบใหม่อีกครั้ง";
+    if(d && !d.asap) S.err = S.err || t("slotGone");
     S.slot = null;
   }
   if(!C.allowPickup) S.mode = "deliver";
@@ -256,23 +412,28 @@ function applyConfig(cfg){
   if(!C.enableStamps) S.useFree = false;
   if(!C.enableCodes) S.applied = null;
   // re-link cart lines to the fresh menu; drop sold-out drinks
-  S.cart = S.cart.filter(l=>C.menu.some(m=>m.id===l.m.id)).map(l=>({...l, m:C.menu.find(m=>m.id===l.m.id)}));
+  const before = S.cart.length;
+  S.cart = S.cart.filter(l=>C.menu.some(m=>m.id===l.m.id && m.available!==false)).map(l=>({...l, m:C.menu.find(m=>m.id===l.m.id)}));
+  if(S.cart.length<before) S.err = S.err || t("itemsGone");
 }
 function applyCustomer(c){
   S.cust = c;
   S.phone = c.phone || "";
   if(c.lastMode==="pickup" && C.allowPickup) S.mode = "pickup";
-  if(C.locations.includes(c.lastLoc)){ S.loc = c.lastLoc; S.locNote = c.lastLocNote || ""; }
+  if(C.locations.includes(c.lastLoc)) S.loc = c.lastLoc;
   if(C.dropOptions.includes(c.lastDrop)) S.drop = c.lastDrop;
+  // floor / room are never filled in for the customer — they type them every order
 }
 
 // ---------- views ----------
 // Logo mark: the two sleepy eyes from the ตื่นเช้า wordmark
 function logoSvg(){return `<svg viewBox="0 0 36 22" fill="none" stroke="#FFFFFF" stroke-linecap="round" aria-hidden="true"><path d="M2.4 5h9.2M1.8 10.2h10.4" stroke-width="2"/><path d="M4.2 10.2a2.8 2.8 0 0 0 5.6 0z" fill="#FFFFFF" stroke="none"/><path d="M2.4 15.4Q7 20.6 11.6 15.4" stroke-width="2.4"/><path d="M24.4 5h9.2M23.8 10.2h10.4" stroke-width="2"/><path d="M26.2 10.2a2.8 2.8 0 0 0 5.6 0z" fill="#FFFFFF" stroke="none"/><path d="M24.4 15.4Q29 20.6 33.6 15.4" stroke-width="2.4"/></svg>`}
 function renderState(msg, spin, retry){
-  $("#app").innerHTML = `<div class="state"><div>${spin?'<div class="spin"></div>':`<div class="logo" style="margin:auto">${logoSvg()}</div>`}<p>${esc(msg)}</p>${retry?'<button class="again" onclick="location.reload()">ลองใหม่</button>':''}</div></div>`;
+  $("#app").innerHTML = `<div class="state"><div>${spin?'<div class="spin"></div>':`<div class="logo" style="margin:auto">${logoSvg()}</div>`}<p>${esc(msg)}</p>${retry?`<button class="again" onclick="location.reload()">${t("retry")}</button>`:''}</div></div>`;
 }
 const stampDots = ()=>`<div class="stamp">${Array.from({length:C.stampGoal},(_,i)=>`<i class="${i<S.cust.stamps?'on':''}"></i>`).join("")}</div>`;
+const langBtn = ()=>`<button class="lang" id="lang" lang="${LANG==="th"?"en":"th"}" aria-label="${LANG==="th"?"Switch to English":"เปลี่ยนเป็นภาษาไทย"}">${LANG==="th"?"EN":"ไทย"}</button>`;
+const star = '<span style="color:var(--danger)">*</span>';
 
 function render(){
   if(S.done) return renderDone();
@@ -280,100 +441,139 @@ function render(){
   const cats = [...new Set(C.menu.map(m=>m.cat))];
   const day = C.days[S.day];
   const deliver = S.mode==="deliver";
+  const room = roomEnabled();
   $("#app").innerHTML = `
-  <div class="liffbar"><div class="logo">${logoSvg()}</div><div class="t"><b>${esc(C.shopName)}</b><small>${esc(S.cust.name?`สวัสดีคุณ ${S.cust.name}`:C.shopSub)}</small></div>${DEMO?'<span class="demo">ตัวอย่าง</span>':''}</div>
-  <img class="hero" src="brand/banner.png" alt="TUEN_CHAO ตื่นเช้า" width="1150" height="382">
-  <nav class="tabs">${[["round","รอบส่ง"],...(best.length?[["best","ขายดีที่สุด"]]:[]),["menu","เมนูทั้งหมด"],["checkout","ยืนยันออเดอร์"]].map(([id,t])=>`<a href="#${id}" class="${S.tab===id?'on':''}" data-tab="${id}">${t}</a>`).join("")}</nav>
-  ${C.acceptingOrders?'':`<div class="banner">${esc(C.closedMessage)}</div>`}
+  <div class="liffbar"><div class="logo">${logoSvg()}</div><div class="t"><b>${esc(C.shopName)}</b><small>${esc(S.cust.name?t("hello", S.cust.name):shopSub())}</small></div><div class="tools">${DEMO?`<span class="demo">${t("demo")}</span>`:''}${langBtn()}</div></div>
+  <img class="hero" src="brand/banner.webp" alt="TUEN_CHAO ตื่นเช้า" width="1532" height="661">
+  <nav class="tabs">${[["round",t("tabRound")],...(best.length?[["best",t("tabBest")]]:[]),["menu",t("tabMenu")],["checkout",t("tabCheckout")]].map(([id,label])=>`<a href="#${id}" class="${S.tab===id?'on':''}" data-tab="${id}">${label}</a>`).join("")}</nav>
+  ${C.acceptingOrders?'':`<div class="banner">${esc(closedMsg())}</div>`}
+  ${(C.codeBanners||[]).map(b=>`<div class="promo"><div>🎉 <b>${esc(codeLabel(b))}</b><small>${esc(t("useCode", b.code))}${b.end?' · '+esc(t("codeUntil", fmtDay(b.end))):''}</small></div>${S.applied&&S.applied.code===b.code?'':`<button class="promo-use" data-usecode="${esc(b.code)}">${t("applyThis")}</button>`}</div>`).join("")}
 
   <section id="round">
-    <h2>วันและรอบส่ง</h2>
-    ${C.allowPickup?`<div class="seg"><button data-mode="deliver" class="${deliver?'on':''}">จัดส่ง</button><button data-mode="pickup" class="${!deliver?'on':''}">รับที่ร้าน</button></div>`:''}
-    ${day?`<div class="chips">${C.days.map((d,i)=>`<button class="chip ${S.day===i?'on':''}" data-day="${i}" ${dayOpen(d)?'':'disabled'}>${esc(d.rel?d.rel+' · '+d.label:d.label)}</button>`).join("")}</div>
+    <h2>${t("whenTitle")}</h2>
+    ${C.allowPickup?`<div class="seg"><button data-mode="deliver" class="${deliver?'on':''}">${t("deliver")}</button><button data-mode="pickup" class="${!deliver?'on':''}">${t("pickup")}</button></div>`:''}
+    ${day?`<div class="chips">${C.days.map((d,i)=>`<button class="chip ${S.day===i?'on':''}" data-day="${i}" ${dayOpen(d)?'':'disabled'}>${esc(dayRel(d)+' · '+fmtDay(d.date)+(d.asap&&!d.open&&dayNote(d)?' · '+dayNote(d):!d.asap&&!dayOpen(d)&&d.rel==="วันนี้"?' · '+t("closedToday"):''))}</button>`).join("")}</div>
     ${day.asap
-      ?`<div class="asap"><b>${deliver?'ส่งทันทีที่เครื่องดื่มพร้อม':'มารับได้เมื่อร้านทักไลน์'}</b><small>${esc(day.note)}${day.note?' · ':''}ไม่ต้องเลือกเวลา</small></div>`
-      :`<div class="slots">${day.slots.map(x=>`<button class="slot ${S.slot===x.time?'on':''}" data-slot="${esc(x.time)}" ${x.open?'':'disabled'}><b>${esc(x.time)} น.</b><small>${esc(x.note)}</small></button>`).join("")}</div>`}`
-    :`<p class="hint">ช่วงนี้ยังไม่มีรอบเปิดรับ</p>`}
+      ?`<div class="asap"><b>${deliver?t("asapDeliver"):t("asapPickup")}</b><small>${esc(dayNote(day))}${dayNote(day)?' · ':''}${t("noTime")}</small></div>`
+      :`<div class="slots">${day.slots.map(x=>`<button class="slot ${S.slot===x.time?'on':''}" data-slot="${esc(x.time)}" ${x.open?'':'disabled'}><b>${esc(t("time", x.time))}</b>${slotNote(x)?`<small>${esc(slotNote(x))}</small>`:''}</button>`).join("")}</div>`}`
+    :`<p class="hint">${t("noDays")}</p>`}
     ${deliver?`
-    <label class="f" for="loc">สถานที่ส่ง <span style="color:var(--danger)">*</span></label>
-    <select id="loc">${C.locations.length>1?'<option value="">— เลือกสถานที่ —</option>':''}${C.locations.map(l=>`<option ${S.loc===l?'selected':''}>${esc(l)}</option>`).join("")}</select>
-    ${C.dropOptions.length?`<label class="f">วิธีส่ง</label>
-    <div class="seg">${C.dropOptions.map(o=>`<button data-drop="${esc(o)}" class="${S.drop===o?'on':''}">${esc(o)}</button>`).join("")}</div>`:''}
-    <label class="f" for="locNote">${!C.dropOptions.length?'จุดรับเพิ่มเติม':roomEnabled()?'เลขห้อง <span style="color:var(--danger)">*</span>':'เลขห้อง'}</label>
-    ${roomEnabled()
-      ?`<input id="locNote" maxlength="100" placeholder="${C.dropOptions.length?'เช่น อาคาร A ห้อง 1204':'เช่น ห้อง 204 / ชั้น 2 หน้าลิฟต์'}" value="${esc(S.locNote)}">`
-      :`<input id="locNote" disabled placeholder="ไม่ต้องกรอกเมื่อส่งที่${esc(S.drop)}">`}`
-    :`<p class="hint">${day&&day.asap?'ร้านจะทักไลน์เมื่อเครื่องดื่มพร้อม':'มารับที่ร้านตามเวลาที่เลือก ร้านจะทักไลน์เมื่อเครื่องดื่มพร้อม'}</p>`}
+    <label class="f" for="loc">${t("place")} ${star}</label>
+    <select id="loc">${C.locations.length>1?`<option value="">${t("choosePlace")}</option>`:''}${C.locations.map(l=>`<option value="${esc(l)}" ${S.loc===l?'selected':''}>${esc(locName(l))}</option>`).join("")}</select>
+    ${C.dropOptions.length?`<label class="f">${t("dropTitle")}</label>
+    <div class="seg">${C.dropOptions.map(o=>`<button data-drop="${esc(o)}" class="${S.drop===o?'on':''}">${esc(dropName(o))}</button>`).join("")}</div>
+    <div class="room">
+      <div><label class="f" for="floor">${t("floor")} ${room?star:''}</label><input id="floor" maxlength="10" ${room?`placeholder="${t("floorPh")}" value="${esc(S.floor)}"`:'disabled'}></div>
+      <div><label class="f" for="room">${t("room")} ${room?star:''}</label><input id="room" maxlength="20" ${room?`placeholder="${t("roomPh")}" value="${esc(S.room)}"`:'disabled'}></div>
+    </div>`
+    :`<label class="f" for="locNote">${t("locNote")}</label>
+    <input id="locNote" maxlength="100" placeholder="${t("locNotePh")}" value="${esc(S.locNote)}">`}`
+    :`<p class="hint">${day&&day.asap?t("pickupHintAsap"):t("pickupHint")}</p>`}
   </section>
 
-  ${best.length?`<section id="best"><h2>ขายดีที่สุด</h2>
-    <div class="grid">${best.map((m,i)=>`<div class="card"><span class="rank">อันดับ ${i+1}</span>${glass(m)}<h3>${esc(m.name)}</h3><div class="row"><span class="price">${baht(m.price)}</span><button class="add" data-add="${esc(m.id)}" aria-label="เพิ่ม ${esc(m.name)}">+</button></div></div>`).join("")}</div>
+  ${best.length?`<section id="best"><h2>${t("tabBest")}</h2>
+    <div class="grid">${best.map((m,i)=>`<div class="card ${naClass(m)}"><span class="rank">${t("rank", i+1)}</span>${glass(m)}<h3>${esc(mName(m))}</h3><div class="row">${priceOrNa(m,"span")}${addBtn(m)}</div></div>`).join("")}</div>
   </section>`:''}
 
-  <section id="menu"><h2>เมนูทั้งหมด</h2>
-    ${cats.map(c=>`<div class="cat">${esc(c)}</div><div class="list">${C.menu.filter(m=>m.cat===c).map(m=>`<div class="li">${glass(m)}<div class="t"><b>${esc(m.name)}</b><small>${baht(m.price)}</small></div><button class="add" data-add="${esc(m.id)}" aria-label="เพิ่ม ${esc(m.name)}">+</button></div>`).join("")}</div>`).join("")}
+  <section id="menu"><h2>${t("tabMenu")}</h2>
+    ${cats.map(c=>`<div class="cat">${esc(catName(c))}</div><div class="list">${C.menu.filter(m=>m.cat===c).map(m=>`<div class="li ${naClass(m)}">${glass(m)}<div class="t"><b>${esc(mName(m))}</b>${priceOrNa(m,"small")}</div>${addBtn(m)}</div>`).join("")}</div>`).join("")}
   </section>
 
-  <section id="checkout"><h2>ติดต่อ & ชำระเงิน</h2>
-    <label class="f" for="phone">เบอร์โทร <span style="color:var(--danger)">*</span></label>
+  <section id="checkout"><h2>${t("contactTitle")}</h2>
+    <label class="f" for="phone">${t("phone")} ${star}</label>
     <input id="phone" inputmode="tel" autocomplete="tel" placeholder="0812345678" value="${esc(S.phone)}">
-    <p class="hint">ถ้าหาที่ส่งไม่เจอ ร้านจะโทรหาเบอร์นี้</p>
-    ${C.enableCodes?`<label class="f" for="code">โค้ดส่วนลด</label>
-    <div class="code"><input id="code" placeholder="${firstOrder()?'ลูกค้าใหม่ลองใส่ NEW10':'ใส่โค้ด'}" value="${esc(S.applied?S.applied.code:S.code)}" ${S.applied?'disabled':''}><button id="applyCode" ${S.codeBusy?'disabled':''}>${S.applied?'ยกเลิก':S.codeBusy?'กำลังตรวจ…':'ใช้โค้ด'}</button></div>
-    ${S.applied?`<p class="ok">✓ ${esc(S.applied.label)}</p>`:S.codeErr?`<p class="err">${esc(S.codeErr)}</p>`:''}`:''}
-    ${C.enableStamps?`<label class="f">บัตรสะสมแต้ม</label>
-    <div class="stampcard">${stampDots()}<small>${S.cust.stamps}/${C.stampGoal} แก้ว · ครบ ${C.stampGoal} แก้วรับฟรี 1 แก้ว</small>
-      ${S.cust.freeCups>0?`<label class="opt"><input type="checkbox" id="useFree" ${S.useFree?'checked':''}> ใช้สิทธิ์แก้วฟรี (มี ${S.cust.freeCups} สิทธิ์)<span class="p">ฟรีแก้วที่แพงที่สุด</span></label>`:''}
+    <p class="hint">${t("phoneHint")}</p>
+    ${C.enableCodes?`<label class="f" for="code">${t("code")}</label>
+    <div class="code"><input id="code" placeholder="${t("codePh")}" value="${esc(S.applied?S.applied.code:S.code)}" ${S.applied?'disabled':''}><button id="applyCode" ${S.codeBusy?'disabled':''}>${S.applied?t("codeRemove"):S.codeBusy?t("codeChecking"):t("codeApply")}</button></div>
+    ${S.applied?`<p class="ok">✓ ${esc(codeLabel(S.applied))}</p>${codeShort()?`<p class="err">${esc(t("codeNeedCups", S.applied.code, S.applied.minCups))}</p>`:''}`:S.codeErr?`<p class="err">${esc(S.codeErr)}</p>`:''}`:''}
+    ${C.enableStamps?`<label class="f">${t("stamps")}</label>
+    <div class="stampcard">${stampDots()}<small>${t("stampLine", S.cust.stamps, C.stampGoal)}</small>
+      ${S.cust.freeCups>0?`<label class="opt"><input type="checkbox" id="useFree" ${S.useFree?'checked':''}> ${t("useFree", S.cust.freeCups)}<span class="p">${t("useFreeHint")}</span></label>`:''}
     </div>`:''}
-    <label class="f">ชำระเงิน</label>
-    <div class="pay"><button data-pay="promptpay" class="${S.pay==='promptpay'?'on':''}">โอนพร้อมเพย์</button><button data-pay="cash" class="${S.pay==='cash'?'on':''}" ${cashLocked()?'disabled':''}>เงินสดปลายทาง</button></div>
-    <p class="hint">${cashLocked()?'ออเดอร์แรกชำระผ่านพร้อมเพย์ก่อน ครั้งถัดไปเลือกเงินสดปลายทางได้':'เลือกได้ทั้งสองแบบ'}</p>
-    <label class="f" for="note">ฝากถึงร้าน</label>
-    <textarea id="note" maxlength="300" placeholder="ไม่บังคับ">${esc(S.note)}</textarea>
+    <label class="f">${t("pay")}</label>
+    <div class="pay"><button data-pay="promptpay" class="${S.pay==='promptpay'?'on':''}">${t("promptpay")}</button><button data-pay="cash" class="${S.pay==='cash'?'on':''}" ${cashLocked()?'disabled':''}>${t("cash")}</button></div>
+    <p class="hint">${cashLocked()?t("cashLocked"):t("payBoth")}</p>
+    <label class="f" for="note">${t("note")}</label>
+    <textarea id="note" maxlength="300" placeholder="${t("optional")}">${esc(S.note)}</textarea>
   </section>
 
-  <section><h2>สรุปรายการ</h2>
+  <section><h2>${t("summary")}</h2>
     <div class="sum">
-      ${S.cart.length? S.cart.map((l,i)=>`<div class="it"><div class="t"><b>${esc(l.m.name)}</b><small>${esc([l.sweet,...l.extras.map(e=>e[0]),l.note].filter(Boolean).join(" · "))}</small></div><div class="qty"><button data-dec="${i}" aria-label="ลด">−</button><span>${l.qty}</span><button data-inc="${i}" aria-label="เพิ่ม">+</button></div><span class="price" style="min-width:52px;text-align:right">${lineTotal(l)}</span></div>`).join("") : `<div class="empty">ยังไม่มีเครื่องดื่มในตะกร้า กด + ที่เมนูด้านบน</div>`}
-      <div class="kv"><span>${deliver?'ส่ง':'รับ'} ${day?esc(day.rel||day.label):''}</span><span>${day&&day.asap?'เร็วที่สุด':S.slot? esc(S.slot)+' น.':'ยังไม่เลือกรอบ'}</span></div>
-      ${deliver?`<div class="kv"><span>สถานที่</span><span style="text-align:right">${esc([S.loc||'—',S.drop,roomEnabled()?S.locNote.trim():''].filter(Boolean).join(' · '))}</span></div>
-      <div class="kv"><span>ค่าส่ง</span><span>${C.deliveryFee?baht(C.deliveryFee):'ฟรี'}</span></div>`:''}
-      ${discount()?`<div class="kv"><span>ส่วนลด${S.applied?' '+esc(S.applied.code):''}${freeDisc()?' + แก้วฟรี':''}</span><span class="neg">−${discount()}</span></div>`:''}
-      <div class="kv total"><span>ยอดชำระ</span><span>${baht(total())}</span></div>
+      ${S.cart.length? S.cart.map((l,i)=>`<div class="it"><div class="t"><b>${esc(mName(l.m))}</b><small>${esc([l.sweet,...l.extras.map(e=>extraName(e[0])),l.note].filter(Boolean).join(" · "))}</small></div><div class="qty"><button data-dec="${i}" aria-label="${t("less")}">−</button><span>${l.qty}</span><button data-inc="${i}" aria-label="${t("more")}">+</button></div><span class="price" style="min-width:52px;text-align:right">${lineTotal(l)}</span></div>`).join("") : `<div class="empty">${t("empty")}</div>`}
+      <div class="kv"><span>${deliver?t("sumDeliver"):t("sumPickup")} ${day?esc(day.asap?t("today"):fmtDay(day.date)):''}</span><span>${day&&day.asap?t("asapShort"):S.slot? esc(t("time", S.slot)):t("noSlot")}</span></div>
+      ${deliver?`<div class="kv"><span>${t("where")}</span><span id="sumWhere" style="text-align:right">${esc(whereSummary())}</span></div>
+      <div class="kv"><span>${t("fee")}</span><span>${C.deliveryFee?baht(C.deliveryFee):t("free")}</span></div>`:''}
+      ${discount()?`<div class="kv"><span>${t("discount")}${codeDisc()?' '+esc(S.applied.code):''}${freeDisc()?' + '+t("freeCup"):''}</span><span class="neg">−${discount()}</span></div>`:''}
+      ${codeShort()?`<div class="kv"><span class="promo-hint">${esc(t("codeNeedCups", S.applied.code, S.applied.minCups))}</span></div>`:''}
+      <div class="kv total"><span>${t("total")}</span><span>${baht(total())}</span></div>
     </div>
   </section>
 
   <div class="bar" id="bar">${barHtml()}</div>
-  ${S.sheet? sheetHtml():''}`;
+  ${S.sheet? sheetHtml():''}
+  ${S.popup? popupHtml():''}`;
   bind();
+  markMissing();
 }
 
+// The order button is always tappable; tapping it too early lists what's missing (see submit)
 function barHtml(){
   const miss = missing();
-  return `${S.err?`<p class="err">${esc(S.err)}</p>`:''}<div class="in"><div class="t">${S.cart.length&&!miss?count()+' แก้ว':esc(miss)}<b>${baht(total())}</b></div><button class="cta" id="submit" ${ready()?'':'disabled'}>${S.busy?'กำลังส่ง…':'สั่งเครื่องดื่ม'}</button></div>`;
+  return `${S.err?`<p class="err">${esc(S.err)}</p>`:''}<div class="in"><div class="t">${S.cart.length&&!miss?t("cups", count()):esc(miss)}<b>${baht(total())}</b></div><button class="cta" id="submit" ${S.busy?'disabled':''}>${S.busy?t("sending"):t("submit")}</button></div>`;
 }
-function refreshBar(){ $("#bar").innerHTML = barHtml(); $("#submit").onclick = submit; }
+function refreshBar(){ $("#bar").innerHTML = barHtml(); $("#submit").onclick = submit; markMissing(); }
+
+// after the first attempt, outline whatever is still missing
+function markMissing(){
+  document.querySelectorAll(".invalid").forEach(e=>e.classList.remove("invalid"));
+  if(!S.tried) return;
+  missingList().forEach(m=>{ const e=m.el&&$(m.el); if(e && m.el!=="#menu") e.classList.add("invalid"); });
+}
+function popupHtml(){
+  return `<div class="sheet-bg dlg-bg" id="popBg"><div class="dlg" role="alertdialog" aria-labelledby="popT">
+    <h3 id="popT">${t("missTitle")}</h3>
+    <ul>${S.popup.map(m=>`<li>${esc(m.msg)}</li>`).join("")}</ul>
+    <button class="cta" id="popOk" style="width:100%">${t("ok")}</button>
+  </div></div>`;
+}
+function closePopup(){
+  const first = S.popup && S.popup[0];
+  S.popup = null; render();
+  const e = first && first.el && $(first.el);
+  if(!e) return;
+  e.scrollIntoView({behavior:"smooth", block:"center"});
+  if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.tagName)) setTimeout(()=>e.focus({preventScroll:true}), 350);
+}
+// "Deliver to" line of the summary, kept in sync while typing floor / room
+function whereSummary(){
+  const room = !roomEnabled() ? ""
+    : C.dropOptions.length ? (S.floor.trim() && S.room.trim() ? t("roomText", S.floor.trim(), S.room.trim()) : "")
+    : S.locNote.trim();
+  return [S.loc?locName(S.loc):'—', S.drop?dropName(S.drop):'', room].filter(Boolean).join(' · ');
+}
+function refreshWhere(){ const w=$("#sumWhere"); if(w) w.textContent = whereSummary(); refreshBar(); }
 
 const sweetOk = (m,s)=>!(m.sweetOff||[]).includes(s);
 const defaultSweet = m=>sweetOk(m,C.sweetRecommended) && C.sweetness.includes(C.sweetRecommended)? C.sweetRecommended : C.sweetness.find(s=>sweetOk(m,s));
 function sheetHtml(){
   const m = C.menu.find(x=>x.id===S.sheet.id);
-  return `<div class="sheet-bg" id="sheetBg"><div class="sheet" role="dialog" aria-label="${esc(m.name)}">
-    <div style="display:flex;gap:12px;align-items:center"><div style="width:72px">${glass(m)}</div><div><h3>${esc(m.name)}</h3><span class="price">${baht(m.price)}</span></div></div>
-    ${C.sweetness.length?`<div class="oh">ความหวาน <small>จำเป็น · เลือก 1 อย่าง</small></div>
+  return `<div class="sheet-bg" id="sheetBg"><div class="sheet" role="dialog" aria-label="${esc(mName(m))}">
+    <div style="display:flex;gap:12px;align-items:center"><div style="width:72px">${glass(m)}</div><div><h3>${esc(mName(m))}</h3><span class="price">${baht(m.price)}</span></div></div>
+    ${C.sweetness.length?`<div class="oh">${t("sweet")} <small>${t("sweetReq")}</small></div>
     ${C.sweetness.map(s=>sweetOk(m,s)
-      ?`<label class="opt"><input type="radio" name="sw" value="${esc(s)}" ${s===defaultSweet(m)?'checked':''}> ${esc(s)}${s===C.sweetRecommended?' <span class="rec">แนะนำ</span>':''}</label>`
-      :`<label class="opt off"><input type="radio" disabled> ${esc(s)}<span class="p">ไม่มีสำหรับเมนูนี้</span></label>`).join("")}`:''}
-    ${C.extras.length?`<div class="oh">เพิ่มเติม <small>ไม่บังคับ</small></div>
+      ?`<label class="opt"><input type="radio" name="sw" value="${esc(s)}" ${s===defaultSweet(m)?'checked':''}> ${esc(s)}${s===C.sweetRecommended?` <span class="rec">${t("rec")}</span>`:''}</label>`
+      :`<label class="opt off"><input type="radio" disabled> ${esc(s)}<span class="p">${t("sweetNa")}</span></label>`).join("")}`:''}
+    ${C.extras.length?`<div class="oh">${t("extras")} <small>${t("optional")}</small></div>
     ${C.extras.map(([n,p],i)=>!C.extrasOff.includes(n)
-      ?`<label class="opt"><input type="checkbox" name="ex" value="${i}"> ${esc(n)}<span class="p">+${p}</span></label>`
-      :`<label class="opt off"><input type="checkbox" disabled> ${esc(n)}<span class="p">ไม่พร้อมให้บริการ</span></label>`).join("")}`:''}
-    <label class="f" for="itemNote">หมายเหตุถึงร้าน</label><input id="itemNote" maxlength="100" placeholder="เช่น น้ำแข็งน้อย">
-    <div style="display:flex;gap:10px;margin-top:16px"><button class="cta" style="background:var(--line);color:var(--ink)" id="sheetClose">ยกเลิก</button><button class="cta" style="flex:1" id="sheetAdd">ใส่ตะกร้า</button></div>
+      ?`<label class="opt"><input type="checkbox" name="ex" value="${i}"> ${esc(extraName(n))}<span class="p">+${p}</span></label>`
+      :`<label class="opt off"><input type="checkbox" disabled> ${esc(extraName(n))}<span class="p">${t("na")}</span></label>`).join("")}`:''}
+    <label class="f" for="itemNote">${t("itemNote")}</label><input id="itemNote" maxlength="100" placeholder="${t("itemNotePh")}">
+    <div style="display:flex;gap:10px;margin-top:16px"><button class="cta" style="background:var(--line);color:var(--ink)" id="sheetClose">${t("cancel")}</button><button class="cta" style="flex:1" id="sheetAdd">${t("addCart")}</button></div>
   </div></div>`;
 }
 
 function bind(){
+  if(S.popup){ $("#popOk").onclick = closePopup; $("#popBg").onclick = e=>{ if(e.target.id==="popBg") closePopup(); }; $("#popOk").focus(); }
   document.querySelectorAll("[data-tab]").forEach(a=>a.onclick=e=>{e.preventDefault();S.tab=a.dataset.tab;document.getElementById(S.tab).scrollIntoView({behavior:"smooth",block:"start"});document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("on",x===a))});
   document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{S.mode=b.dataset.mode;render()});
   document.querySelectorAll("[data-day]").forEach(b=>b.onclick=()=>{S.day=+b.dataset.day;if(S.slot&&!C.days[S.day].slots.some(x=>x.time===S.slot&&x.open))S.slot=null;render()});
@@ -383,13 +583,17 @@ function bind(){
   document.querySelectorAll("[data-inc]").forEach(b=>b.onclick=()=>{S.cart[+b.dataset.inc].qty++;render()});
   document.querySelectorAll("[data-dec]").forEach(b=>b.onclick=()=>{const l=S.cart[+b.dataset.dec];l.qty--;if(!l.qty)S.cart.splice(+b.dataset.dec,1);render()});
   document.querySelectorAll("[data-pay]").forEach(b=>b.onclick=()=>{S.pay=b.dataset.pay;render()});
+  $("#lang").onclick=()=>{ setLang(LANG==="th"?"en":"th"); render(); };
   const loc=$("#loc"); if(loc) loc.onchange=()=>{S.loc=loc.value;render()};
-  const ln=$("#locNote"); if(ln) ln.oninput=()=>{S.locNote=ln.value;refreshBar()};
+  const ln=$("#locNote"); if(ln) ln.oninput=()=>{S.locNote=ln.value;refreshWhere()};
+  const fl=$("#floor"); if(fl && !fl.disabled) fl.oninput=()=>{S.floor=fl.value;refreshWhere()};
+  const rm=$("#room"); if(rm && !rm.disabled) rm.oninput=()=>{S.room=rm.value;refreshWhere()};
   $("#phone").oninput=e=>{S.phone=e.target.value;refreshBar()};
   $("#note").oninput=e=>S.note=e.target.value;
   const code=$("#code"); if(code) code.oninput=()=>S.code=code.value;
   const uf=$("#useFree"); if(uf) uf.onchange=()=>{S.useFree=uf.checked;render()};
-  const ac=$("#applyCode"); if(ac) ac.onclick=applyCode;
+  const ac=$("#applyCode"); if(ac) ac.onclick=()=>applyCode();
+  document.querySelectorAll("[data-usecode]").forEach(b=>b.onclick=()=>{ S.applied=null; S.code=b.dataset.usecode; applyCode(); });
   $("#submit").onclick=submit;
   if(S.sheet){
     $("#sheetClose").onclick=()=>{S.sheet=null;render()};
@@ -409,7 +613,7 @@ function bind(){
 async function applyCode(){
   if(S.applied){ S.applied=null; S.code=""; S.codeErr=""; return render(); }
   const c = S.code.trim().toUpperCase();
-  if(!c){ S.codeErr="กรอกโค้ดก่อนกดใช้"; return render(); }
+  if(!c){ S.codeErr=t("codeEmpty"); return render(); }
   S.codeBusy=true; S.codeErr=""; render();
   try{ S.applied = (await api("checkCode",{code:c})).code; }
   catch(e){ S.codeErr = e.message; }
@@ -417,13 +621,15 @@ async function applyCode(){
 }
 
 async function submit(){
-  if(!ready()) return;
+  if(S.busy) return;
+  const miss = missingList();
+  if(miss.length){ S.tried = true; S.popup = miss; return render(); }
   S.busy=true; S.err=""; refreshBar();
   const day=C.days[S.day];
   try{
     const r = await api("order", {order:{
       mode:S.mode, date:day.date, slot:day.asap?"":S.slot,
-      loc:S.mode==="deliver"?S.loc:"", drop:S.mode==="deliver"?S.drop:"", locNote:roomEnabled()?S.locNote.trim():"",
+      loc:S.mode==="deliver"?S.loc:"", drop:S.mode==="deliver"?S.drop:"", locNote:locNoteValue(),
       phone:S.phone, note:S.note.trim(), pay:S.pay, code:S.applied?S.applied.code:"", useFree:!!freeDisc(),
       items:S.cart.map(l=>({id:l.m.id, qty:l.qty, sweet:l.sweet, extras:l.extras.map(e=>e[0]), note:l.note}))
     }});
@@ -444,43 +650,44 @@ async function submit(){
 async function sendConfirm(no){
   try{
     if(!liff.isInClient()) throw 0;
-    await liff.sendMessages([{type:"text", text:"ยืนยันออเดอร์ "+no}]);
+    await liff.sendMessages([{type:"text", text:t("confirmMsg", no)}]);
   }catch(_){
     api("pushReceipt",{orderNo:no}).catch(()=>{});
   }
 }
 
+// The order text (when / where / item names) comes from the backend in the language used when ordering.
 function renderDone(){
   const o=S.done;
   const qr = o.pay==="promptpay" && C.promptpay && o.total>0;
   $("#app").innerHTML = `<div class="chat">
     <div class="chathead"><div class="logo">${logoSvg()}</div><b>${esc(C.shopName)}</b></div>
-    <div class="msg">ขอบคุณที่สั่งนะคะ ☕ ร้านได้รับออเดอร์แล้ว ใบสั่งซื้อส่งเข้าแชท LINE ของร้านด้วย</div>
+    <div class="msg">${t("thanks")}</div>
     <div class="flex">
-      <div class="hd"><small>ใบสั่งซื้อ</small><b>${esc(o.no)}</b></div>
+      <div class="hd"><small>${t("order")}</small><b>${esc(o.no)}</b></div>
       <div class="bd">
-        <div class="kv"><span>รอบ</span><span>${esc(o.when)}</span></div>
-        <div class="kv"><span>สถานที่</span><span style="text-align:right;max-width:60%">${esc(o.where)}</span></div>
+        <div class="kv"><span>${t("when")}</span><span>${esc(o.when)}</span></div>
+        <div class="kv"><span>${t("where")}</span><span style="text-align:right;max-width:60%">${esc(o.where)}</span></div>
         <hr>
         ${o.items.map(l=>`<div class="kv"><span>${l.qty}× ${esc(l.name)}${l.opts?`<br><small style="color:var(--muted)">${esc(l.opts)}</small>`:''}</span><span>${l.total}</span></div>`).join("")}
         <hr>
-        <div class="kv"><span>ยอดรวม</span><span>${o.subtotal} บาท</span></div>
-        ${o.discount?`<div class="kv"><span>ส่วนลด</span><span style="color:var(--pandan)">−${o.discount} บาท</span></div>`:''}
-        ${o.deliveryFee?`<div class="kv"><span>ค่าส่ง</span><span>${o.deliveryFee} บาท</span></div>`:''}
-        <div class="kv total"><span>ยอดชำระ</span><span>${o.total} บาท</span></div>
+        <div class="kv"><span>${t("subtotal")}</span><span>${t("baht", o.subtotal)}</span></div>
+        ${o.discount?`<div class="kv"><span>${t("discount")}</span><span style="color:var(--pandan)">−${t("baht", o.discount)}</span></div>`:''}
+        ${o.deliveryFee?`<div class="kv"><span>${t("fee")}</span><span>${t("baht", o.deliveryFee)}</span></div>`:''}
+        <div class="kv total"><span>${t("total")}</span><span>${t("baht", o.total)}</span></div>
       </div>
       <div class="ft">${qr
-        ?`<div class="qr"><img class="qrimg" src="https://promptpay.io/${esc(C.promptpay)}/${o.total}.png" alt="QR พร้อมเพย์ ${o.total} บาท"><div>สแกนจ่ายพร้อมเพย์ ${o.total} บาท<br>แล้วส่งสลิปในแชทร้านได้เลย</div></div>`
-        :`<div class="qr">${o.total<=0?'ไม่มียอดที่ต้องชำระ':o.pay==='cash'?'ชำระเงินสดตอนรับเครื่องดื่ม':'ร้านจะส่งช่องทางชำระเงินให้ในแชท'}</div>`}</div>
+        ?`<div class="qr"><img class="qrimg" src="https://promptpay.io/${esc(C.promptpay)}/${o.total}.png" alt="${esc(t("qrAlt", o.total))}"><div>${t("scan", o.total)}</div></div>`
+        :`<div class="qr">${o.total<=0?t("nothingToPay"):o.pay==='cash'?t("cashPay"):t("payLater")}</div>`}</div>
     </div>
-    ${C.enableStamps?`<div class="msg">บัตรสะสมแต้ม: ${S.cust.stamps}/${C.stampGoal} แก้ว ${S.cust.freeCups?`· 🎁 มีสิทธิ์แก้วฟรี ${S.cust.freeCups} แก้ว`:`ครบ ${C.stampGoal} แก้วรับฟรี 1 แก้ว`}
+    ${C.enableStamps?`<div class="msg">${t("stampDone", S.cust.stamps, C.stampGoal)} ${S.cust.freeCups?t("freeLeft", S.cust.freeCups):t("collect", C.stampGoal)}
       ${stampDots()}</div>`:''}
-    ${!DEMO && liff.isInClient()?'<button class="again" id="close">กลับไปที่แชท</button>':''}
-    <button class="again" id="again">สั่งอีกรอบ</button>
+    ${!DEMO && liff.isInClient()?`<button class="again" id="close">${t("backChat")}</button>`:''}
+    <button class="again" id="again">${t("again")}</button>
   </div>`;
   const cl=$("#close"); if(cl) cl.onclick=()=>liff.closeWindow();
   $("#again").onclick=async()=>{
-    Object.assign(S,{done:null,cart:[],applied:null,code:"",codeErr:"",useFree:false,pay:"promptpay",note:"",slot:null,err:""});
+    Object.assign(S,{done:null,cart:[],applied:null,code:"",codeErr:"",useFree:false,pay:"promptpay",note:"",slot:null,err:"",floor:"",room:"",locNote:"",tried:false});
     render();
     try{ const r=await api("init"); applyConfig(r.config); S.cust={...S.cust,...r.customer}; render(); }catch(_){}
   };
