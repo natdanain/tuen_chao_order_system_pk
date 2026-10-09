@@ -432,7 +432,9 @@ function renderState(msg, spin, retry){
   $("#app").innerHTML = `<div class="state"><div>${spin?'<div class="spin"></div>':`<div class="logo" style="margin:auto">${logoSvg()}</div>`}<p>${esc(msg)}</p>${retry?`<button class="again" onclick="location.reload()">${t("retry")}</button>`:''}</div></div>`;
 }
 const stampDots = ()=>`<div class="stamp">${Array.from({length:C.stampGoal},(_,i)=>`<i class="${i<S.cust.stamps?'on':''}"></i>`).join("")}</div>`;
-const langBtn = ()=>`<button class="lang" id="lang" lang="${LANG==="th"?"en":"th"}" aria-label="${LANG==="th"?"Switch to English":"เปลี่ยนเป็นภาษาไทย"}">${LANG==="th"?"EN":"ไทย"}</button>`;
+// Show the current language (rather than the destination language) so the
+// control reads as a clear state indicator. Clicking it still toggles language.
+const langBtn = ()=>`<button class="lang" id="lang" lang="${LANG}" aria-label="${LANG==="th"?"เปลี่ยนเป็นภาษาอังกฤษ":"Switch to Thai"}"><span aria-hidden="true">${LANG==="th"?"🇹🇭":"🇬🇧"}</span> ${LANG==="th"?"ไทย":"EN"}</button>`;
 const star = '<span style="color:var(--danger)">*</span>';
 
 function render(){
