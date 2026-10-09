@@ -7,6 +7,10 @@
 
 const ACTIONS = { init: init_, checkCode: checkCode_, order: order_, pushReceipt: pushReceipt_ };
 
+// Language of customer-facing text for the current request ('th' | 'en'), set from body.lang.
+// The sheet always stores Thai; English only changes what the customer reads.
+let LANG_ = 'th';
+
 function doGet() {
   return json_({ ok: true, service: 'home-cafe' });
 }
@@ -18,13 +22,14 @@ function doPost(e) {
     handleWebhook_(body.events);
     return json_({ ok: true });
   }
+  LANG_ = body.lang === 'en' ? 'en' : 'th';
   try {
     const fn = ACTIONS[body.action];
     if (!fn) fail_('unknown action');
     return json_(Object.assign({ ok: true }, fn(body)));
   } catch (err) {
     if (!err.user) console.error(err && err.stack || err);
-    return json_({ ok: false, error: err.user ? err.message : 'ระบบขัดข้อง ลองใหม่อีกครั้ง' });
+    return json_({ ok: false, error: err.user ? err.message : LANG_ === 'en' ? 'Something went wrong. Please try again.' : 'ระบบขัดข้อง ลองใหม่อีกครั้ง' });
   }
 }
 
@@ -32,9 +37,9 @@ function json_(o) {
   return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 }
 
-/** Error whose message is safe to show the customer. */
-function fail_(msg) {
-  const e = new Error(msg);
+/** Error whose message is safe to show the customer, in Thai or (when given) English. */
+function fail_(th, en) {
+  const e = new Error(LANG_ === 'en' && en ? en : th);
   e.user = true;
   throw e;
 }
@@ -52,12 +57,18 @@ function publicConfig_(s) {
   return {
     shopName: s.shopName, shopSub: s.shopSub,
     acceptingOrders: s.acceptingOrders, closedMessage: s.closedMessage,
+    // English display text; same order as the Thai lists (values sent back are always the Thai ones)
+    en: {
+      shopSub: s.shopSubEn, closedMessage: s.closedMessageEn,
+      locations: s.locationsEn, dropOptions: s.dropOptionsEn, extras: s.extrasEn,
+    },
     allowPickup: s.allowPickup, locations: s.locations, deliveryFee: s.deliveryFee,
     dropOptions: s.dropOptions, roomRequiredFor: s.roomRequiredFor,
     enableCodes: s.enableCodes, enableStamps: s.enableStamps, extrasOff: s.extrasOff,
     sweetness: s.sweetness, sweetRecommended: s.sweetRecommended, extras: s.extras,
     promptpay: s.promptpay, firstOrderPromptPayOnly: s.firstOrderPromptPayOnly,
     stampGoal: s.stampGoal, receiptMode: s.receiptMode,
+    codeBanners: s.enableCodes ? codeBanners_() : [],
     menu: menu_(), days: days_(s),
   };
 }
@@ -78,10 +89,10 @@ function customerView_(c, user) {
 
 function checkCode_(b) {
   const user = auth_(b.idToken);
-  if (!settings_().enableCodes) fail_('ตอนนี้ยังไม่เปิดใช้โค้ดส่วนลด');
+  if (!settings_().enableCodes) fail_('ตอนนี้ยังไม่เปิดใช้โค้ดส่วนลด', 'Discount codes are not available right now.');
   const c = findCustomer_(user.userId).row;
-  const code = findCode_(b.code, !c || num_(c.orders) === 0);
-  return { code: { code: code.code, amount: code.amount, label: code.label } };
+  const code = findCode_(b.code, { isFirst: !c || num_(c.orders) === 0, userId: user.userId, orders: table_(SHEETS.orders) });
+  return { code: { code: code.code, amount: code.amount, minCups: code.minCups, label: code.label, labelEn: code.labelEn } };
 }
 
 /** Creates an order. The client only sends choices; every price is recomputed here. */
@@ -89,73 +100,84 @@ function order_(b) {
   const user = auth_(b.idToken);
   const o = b.order || {};
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(20000)) fail_('ร้านกำลังรับออเดอร์อื่นอยู่ ลองกดอีกครั้ง');
+  if (!lock.tryLock(20000)) fail_('ร้านกำลังรับออเดอร์อื่นอยู่ ลองกดอีกครั้ง', 'The shop is busy with another order. Please tap again.');
   let s, order, cust;
   try {
     s = settings_();
-    if (!s.acceptingOrders) fail_(s.closedMessage);
+    if (!s.acceptingOrders) fail_(s.closedMessage, s.closedMessageEn);
     const ot = table_(SHEETS.orders);
     const ct = table_(SHEETS.customers);
     const c = ct.rows.find(r => str_(r.userId) === user.userId);
     const isFirst = !c || num_(c.orders) === 0;
 
-    if (o.mode !== 'deliver' && o.mode !== 'pickup') fail_('เลือกวิธีรับเครื่องดื่มอีกครั้ง');
-    if (o.mode === 'pickup' && !s.allowPickup) fail_('ตอนนี้ร้านยังไม่เปิดให้รับเองที่ร้าน');
+    if (o.mode !== 'deliver' && o.mode !== 'pickup') fail_('เลือกวิธีรับเครื่องดื่มอีกครั้ง', 'Please choose how to receive your drinks again.');
+    if (o.mode === 'pickup' && !s.allowPickup) fail_('ตอนนี้ร้านยังไม่เปิดให้รับเองที่ร้าน', 'Pick-up is not available right now.');
     const mode = o.mode;
     const deliver = mode === 'deliver';
     const loc = !deliver ? '' : s.locations.length === 1 ? s.locations[0] : str_(o.loc);
-    if (deliver && s.locations.indexOf(loc) < 0) fail_('เลือกสถานที่ส่งอีกครั้ง');
+    if (deliver && s.locations.indexOf(loc) < 0) fail_('เลือกสถานที่ส่งอีกครั้ง', 'Please choose the delivery place again.');
     const drop = deliver && s.dropOptions.length ? str_(o.drop) : '';
-    if (deliver && s.dropOptions.length && s.dropOptions.indexOf(drop) < 0) fail_('เลือกวิธีส่งอีกครั้ง');
+    if (deliver && s.dropOptions.length && s.dropOptions.indexOf(drop) < 0) fail_('เลือกวิธีส่งอีกครั้ง', 'Please choose the delivery option again.');
     // With drop options, the room field only exists for drops in roomRequiredFor (e.g. not for the food locker)
     const roomField = deliver && (!s.dropOptions.length || s.roomRequiredFor.indexOf(drop) >= 0);
     const locNote = roomField ? str_(o.locNote).slice(0, 100) : '';
-    if (roomField && s.dropOptions.length && !locNote) fail_('กรอกเลขห้องด้วยนะคะ');
+    if (roomField && s.dropOptions.length && !locNote) fail_('กรอกเลขห้องด้วยนะคะ', 'Please enter your floor and room number.');
     const phone = str_(o.phone).replace(/\D/g, '');
-    if (!/^0\d{8,9}$/.test(phone)) fail_('เบอร์โทรไม่ถูกต้อง');
+    if (!/^0\d{8,9}$/.test(phone)) fail_('เบอร์โทรไม่ถูกต้อง', 'Invalid phone number.');
 
     const menu = {};
     menu_().forEach(m => { menu[m.id] = m; });
     const extraPrice = new Map(s.extras.filter(([n]) => s.extrasOff.indexOf(n) < 0));
-    if (!Array.isArray(o.items) || !o.items.length) fail_('ยังไม่มีเครื่องดื่มในตะกร้า');
-    if (o.items.length > 30) fail_('รายการเยอะเกินไป ทักแชทร้านได้เลย');
+    const extraEn = n => s.extrasEn[s.extras.findIndex(e => e[0] === n)] || '';
+    if (!Array.isArray(o.items) || !o.items.length) fail_('ยังไม่มีเครื่องดื่มในตะกร้า', 'Your cart is empty.');
+    if (o.items.length > 30) fail_('รายการเยอะเกินไป ทักแชทร้านได้เลย', 'Too many items. Please message the shop in chat.');
     const items = o.items.map(it => {
       const m = menu[str_(it.id)];
-      if (!m) fail_('มีเมนูที่หมดแล้ว ลบออกจากตะกร้าแล้วสั่งใหม่');
+      if (!m) fail_('มีเมนูที่หมดแล้ว ลบออกจากตะกร้าแล้วสั่งใหม่', 'Some items are no longer on the menu. Please remove them and order again.');
+      if (!m.available) fail_(m.name + ' ไม่พร้อมให้บริการตอนนี้ ลบออกจากตะกร้าแล้วสั่งใหม่',
+        (m.nameEn || m.name) + ' is not available right now. Please remove it and order again.');
       const qty = Math.floor(Number(it.qty));
-      if (!(qty >= 1 && qty <= 20)) fail_('จำนวนแก้วไม่ถูกต้อง');
+      if (!(qty >= 1 && qty <= 20)) fail_('จำนวนแก้วไม่ถูกต้อง', 'Invalid quantity.');
       const sweet = str_(it.sweet);
-      if (s.sweetness.length && (s.sweetness.indexOf(sweet) < 0 || m.sweetOff.indexOf(sweet) >= 0)) fail_('เลือกระดับความหวานของ ' + m.name + ' อีกครั้ง');
+      if (s.sweetness.length && (s.sweetness.indexOf(sweet) < 0 || m.sweetOff.indexOf(sweet) >= 0)) fail_('เลือกระดับความหวานของ ' + m.name + ' อีกครั้ง',
+        'Please choose the sweetness for ' + (m.nameEn || m.name) + ' again.');
+      // extras: [thaiName, price, englishName]
       const extras = Array.from(new Set((it.extras || []).map(str_)))
-        .filter(n => extraPrice.has(n)).map(n => [n, extraPrice.get(n)]);
+        .filter(n => extraPrice.has(n)).map(n => [n, extraPrice.get(n), extraEn(n)]);
       const unit = m.price + extras.reduce((a, e) => a + e[1], 0);
-      return { id: m.id, name: m.name, base: m.price, qty, sweet, extras, note: str_(it.note).slice(0, 100), unit, total: unit * qty };
+      return { id: m.id, name: m.name, nameEn: m.nameEn, base: m.price, qty, sweet, extras, note: str_(it.note).slice(0, 100), unit, total: unit * qty };
     });
     const cups = items.reduce((a, l) => a + l.qty, 0);
 
     const day = days_(s, ot).filter(d => d.date === str_(o.date))[0];
     let slotTime;
     if (day && day.asap) {
-      if (!day.open) fail_('วันนี้ปิดรับออเดอร์แล้ว เลือกส่งพรุ่งนี้ได้นะคะ');
+      if (!day.open) {
+        if (day.reason === 'notYet') fail_('ร้านเปิดรับ ' + day.openTime + ' น. ตอนนี้สั่งล่วงหน้าได้นะคะ',
+          'We start taking orders at ' + day.openTime + '. You can pre-order for another day.');
+        fail_('วันนี้ปิดรับออเดอร์แล้ว สั่งล่วงหน้าได้นะคะ', 'We have stopped taking orders for today. You can pre-order for another day.');
+      }
       slotTime = ASAP;
     } else {
       const slot = day && day.slots.filter(x => x.time === str_(o.slot))[0];
-      if (!slot || !slot.open) fail_('รอบนี้ปิดรับแล้ว เลือกรอบใหม่อีกครั้ง');
-      if (slot.left != null && cups > slot.left) fail_('รอบ ' + slot.time + ' น. รับได้อีก ' + slot.left + ' แก้ว');
+      if (!slot || !slot.open) fail_('รอบนี้ปิดรับแล้ว เลือกรอบใหม่อีกครั้ง', 'This delivery time is closed. Please choose another time.');
+      if (slot.left != null && cups > slot.left) fail_('รอบ ' + slot.time + ' น. รับได้อีก ' + slot.left + ' แก้ว',
+        'Only ' + slot.left + ' more drinks can be made for ' + slot.time + '.');
       slotTime = slot.time;
     }
 
     const subtotal = items.reduce((a, l) => a + l.total, 0);
     const useFree = !!o.useFree;
-    if (useFree && !(s.enableStamps && c && num_(c.freeCups) > 0)) fail_('ยังไม่มีสิทธิ์แก้วฟรี');
+    if (useFree && !(s.enableStamps && c && num_(c.freeCups) > 0)) fail_('ยังไม่มีสิทธิ์แก้วฟรี', 'You have no free drink yet.');
     const freeDisc = useFree ? Math.max.apply(null, items.map(l => l.base)) : 0;
-    if (str_(o.code) && !s.enableCodes) fail_('ตอนนี้ยังไม่เปิดใช้โค้ดส่วนลด');
-    const code = str_(o.code) ? findCode_(o.code, isFirst) : null;
+    if (str_(o.code) && !s.enableCodes) fail_('ตอนนี้ยังไม่เปิดใช้โค้ดส่วนลด', 'Discount codes are not available right now.');
+    // re-checked here (not trusted from checkCode): still live, not used by this customer yet, enough cups
+    const code = str_(o.code) ? findCode_(o.code, { isFirst, userId: user.userId, orders: ot, cups }) : null;
     const discount = Math.min(subtotal, freeDisc + (code ? code.amount : 0));
     const deliveryFee = mode === 'deliver' ? s.deliveryFee : 0;
     const total = subtotal - discount + deliveryFee;
     const pay = o.pay === 'cash' ? 'cash' : 'promptpay';
-    if (pay === 'cash' && isFirst && s.firstOrderPromptPayOnly) fail_('ออเดอร์แรกชำระผ่านพร้อมเพย์ก่อนนะคะ');
+    if (pay === 'cash' && isFirst && s.firstOrderPromptPayOnly) fail_('ออเดอร์แรกชำระผ่านพร้อมเพย์ก่อนนะคะ', 'Your first order must be paid by PromptPay.');
 
     const now = new Date();
     const prefix = 'ORD-' + fmt_(now, 'yyyyMMdd') + '-';
@@ -171,7 +193,7 @@ function order_(b) {
       displayName: user.name, phone, itemsText: itemsText_(items), cups,
       subtotal, discount, deliveryFee, total, pay, code: code ? code.code : '', usedFreeCup: useFree,
       note: str_(o.note).slice(0, 300), stampsEarned: earned,
-      items: JSON.stringify(items), userId: user.userId, receipt: '', notified: '',
+      items: JSON.stringify(items), userId: user.userId, receipt: '', notified: '', lang: LANG_,
     };
     append_(ot, order);
     if (code) update_(code.t, code.row, { used: num_(code.row.used) + 1 });
@@ -199,7 +221,7 @@ function order_(b) {
   if (s.receiptMode === 'push') {
     try { receiptSent = sendReceipt_(order.orderNo, user.userId, null); } catch (e) { console.error(e); }
   }
-  return { order: publicOrder_(order), customer: cust, receiptSent };
+  return { order: publicOrder_(order, s, LANG_), customer: cust, receiptSent };
 }
 
 /** Fallback for receiptMode = reply when the LIFF page could not send the confirm message itself. */
@@ -209,11 +231,12 @@ function pushReceipt_(b) {
 }
 
 function adminText_(o) {
-  const po = publicOrder_(o);
-  return '🛎 ออเดอร์ใหม่ ' + po.no + '\n' +
+  const po = publicOrder_(o, null, 'th'); // the shop always reads Thai
+  return '🛎 ออเดอร์ใหม่ ' + po.no + (o.lang === 'en' ? ' (ลูกค้าใช้ภาษาอังกฤษ)' : '') + '\n' +
     (o.mode === 'deliver' ? 'ส่ง ' : 'รับ ') + po.when + '\n📍 ' + po.where + '\n\n' +
     o.itemsText + '\n\n' +
-    'ยอด ' + o.total + ' บาท · ' + (o.pay === 'cash' ? 'เงินสด' : 'พร้อมเพย์') + '\n' +
+    'ยอด ' + o.total + ' บาท · ' + (o.pay === 'cash' ? 'เงินสด' : 'พร้อมเพย์') +
+    (o.code ? ' (โค้ด ' + o.code + ' −' + o.discount + ')' : '') + '\n' +
     '👤 ' + o.displayName + ' ' + o.phone +
     (o.note ? '\n📝 ' + o.note : '');
 }
@@ -252,11 +275,14 @@ function handleStatus_(t, r, s) {
   update_(t, r, { notified: done.concat(status).join(',') });
   if (!s.notifyCustomerOnStatus) return;
   const no = str_(r.orderNo);
+  const en = str_(r.lang) === 'en';
+  const where = whereText_(r, s, en ? 'en' : 'th');
   const text = status === STATUS.CANCEL
-    ? 'ออเดอร์ ' + no + ' ถูกยกเลิกแล้ว หากชำระเงินไปแล้ว ร้านจะติดต่อคืนเงินทางแชทนี้นะคะ'
+    ? (en ? 'Order ' + no + ' has been cancelled. If you have already paid, we will contact you here for a refund.'
+          : 'ออเดอร์ ' + no + ' ถูกยกเลิกแล้ว หากชำระเงินไปแล้ว ร้านจะติดต่อคืนเงินทางแชทนี้นะคะ')
     : str_(r.mode) === 'pickup'
-      ? '☕ ออเดอร์ ' + no + ' พร้อมแล้ว มารับที่ร้านได้เลยค่ะ'
-      : '☕ ออเดอร์ ' + no + ' พร้อมแล้ว กำลังไปส่งที่ ' + whereText_(r) + ' นะคะ';
+      ? (en ? '☕ Order ' + no + ' is ready. Come and pick it up!' : '☕ ออเดอร์ ' + no + ' พร้อมแล้ว มารับที่ร้านได้เลยค่ะ')
+      : (en ? '☕ Order ' + no + ' is ready and on its way to ' + where + '.' : '☕ ออเดอร์ ' + no + ' พร้อมแล้ว กำลังไปส่งที่ ' + where + ' นะคะ');
   push_(str_(r.userId), [{ type: 'text', text }]);
 }
 

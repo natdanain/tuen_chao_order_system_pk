@@ -8,7 +8,7 @@ function prop_(k) {
 
 /** Verifies the LIFF ID token with LINE and returns {userId, name}. Cached until the token expires. */
 function auth_(idToken) {
-  if (!idToken) fail_('กรุณาเปิดหน้านี้จาก LINE');
+  if (!idToken) fail_('กรุณาเปิดหน้านี้จาก LINE', 'Please open this page from LINE.');
   const cache = CacheService.getScriptCache();
   const key = 'tok_' + Utilities.base64EncodeWebSafe(
     Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, idToken));
@@ -21,7 +21,7 @@ function auth_(idToken) {
   });
   if (res.getResponseCode() !== 200) {
     console.warn('id token rejected', res.getContentText());
-    fail_('เซสชันหมดอายุ ปิดแล้วเปิดหน้านี้ใหม่อีกครั้ง');
+    fail_('เซสชันหมดอายุ ปิดแล้วเปิดหน้านี้ใหม่อีกครั้ง', 'Your session has expired. Please close and reopen this page.');
   }
   const j = JSON.parse(res.getContentText());
   const user = { userId: j.sub, name: j.name || '' };
@@ -54,14 +54,14 @@ function handleWebhook_(events) {
       if (ev.type !== 'message' || !ev.message || ev.message.type !== 'text') return;
       const text = ev.message.text.trim();
       const src = ev.source || {};
-      const m = /ยืนยันออเดอร์\s+(ORD-\d{8}-\d{3})/.exec(text);
+      const m = /(?:ยืนยันออเดอร์|Confirm order)\s+(ORD-\d{8}-\d{3})/i.exec(text);
       if (m && src.userId) {
         sendReceipt_(m[1], src.userId, ev.replyToken);
       } else if (/^(แต้ม|สะสมแต้ม)$/.test(text) && src.userId) {
         const s = settings_();
         if (!s.enableStamps) return;
         const c = findCustomer_(src.userId).row;
-        reply_(ev.replyToken, [stampMsg_(c ? num_(c.stamps) : 0, c ? num_(c.freeCups) : 0, s.stampGoal)]);
+        reply_(ev.replyToken, [stampMsg_(c ? num_(c.stamps) : 0, c ? num_(c.freeCups) : 0, s.stampGoal, 'th')]);
       } else if (/^(myid|ไอดี)$/i.test(text)) {
         // Helper for setup: tells the owner what to put in Settings → adminTo
         reply_(ev.replyToken, [{ type: 'text', text: src.type + ' id:\n' + (src.groupId || src.roomId || src.userId) }]);
@@ -79,28 +79,44 @@ function sendReceipt_(orderNo, userId, replyToken) {
   const r = ot.rows.find(x => str_(x.orderNo) === orderNo && str_(x.userId) === userId);
   if (!r) return false;
   if (!replyToken && str_(r.receipt)) return true;
-  const msgs = [receiptFlex_(publicOrder_(r), s)];
+  const lang = str_(r.lang) === 'en' ? 'en' : 'th';
+  const msgs = [receiptFlex_(publicOrder_(r, s, lang), s)];
   if (s.enableStamps) {
     const c = findCustomer_(userId).row;
-    msgs.push(stampMsg_(c ? num_(c.stamps) : 0, c ? num_(c.freeCups) : 0, s.stampGoal));
+    msgs.push(stampMsg_(c ? num_(c.stamps) : 0, c ? num_(c.freeCups) : 0, s.stampGoal, lang));
   }
   if (replyToken) reply_(replyToken, msgs); else push_(userId, msgs);
   update_(ot, r, { receipt: replyToken ? 'reply' : 'push' });
   return true;
 }
 
-function stampMsg_(stamps, freeCups, goal) {
-  return {
-    type: 'text',
-    text: 'บัตรสะสมแต้ม ' + stamps + '/' + goal + ' แก้ว\n' +
-      '●'.repeat(Math.min(stamps, goal)) + '○'.repeat(Math.max(0, goal - stamps)) + '\n' +
-      (freeCups ? '🎁 มีสิทธิ์แก้วฟรี ' + freeCups + ' แก้ว ใช้ได้ตอนสั่งครั้งถัดไป' : 'ครบ ' + goal + ' แก้ว รับฟรี 1 แก้ว'),
-  };
+function stampMsg_(stamps, freeCups, goal, lang) {
+  const dots = '●'.repeat(Math.min(stamps, goal)) + '○'.repeat(Math.max(0, goal - stamps));
+  const text = lang === 'en'
+    ? 'Stamp card ' + stamps + '/' + goal + '\n' + dots + '\n' +
+      (freeCups ? '🎁 ' + freeCups + ' free drink(s) to use on your next order' : 'Collect ' + goal + ' to get 1 free drink')
+    : 'บัตรสะสมแต้ม ' + stamps + '/' + goal + ' แก้ว\n' + dots + '\n' +
+      (freeCups ? '🎁 มีสิทธิ์แก้วฟรี ' + freeCups + ' แก้ว ใช้ได้ตอนสั่งครั้งถัดไป' : 'ครบ ' + goal + ' แก้ว รับฟรี 1 แก้ว');
+  return { type: 'text', text };
 }
 
+const RECEIPT_TEXT_ = {
+  th: {
+    order: 'ใบสั่งซื้อ', when: 'รอบ', where: 'สถานที่', subtotal: 'ยอดรวม', discount: 'ส่วนลด', fee: 'ค่าส่ง', total: 'ยอดชำระ',
+    baht: ' บาท', scan: n => 'สแกนจ่ายพร้อมเพย์ ' + n + ' บาท แล้วส่งสลิปในแชทนี้ได้เลย', none: 'ไม่มียอดที่ต้องชำระ',
+    cash: 'ชำระเงินสดตอนรับเครื่องดื่ม', later: 'ร้านจะส่งช่องทางชำระเงินให้ในแชทนี้', alt: 'ออเดอร์ ',
+  },
+  en: {
+    order: 'Order', when: 'Time', where: 'Deliver to', subtotal: 'Subtotal', discount: 'Discount', fee: 'Delivery', total: 'Total',
+    baht: ' THB', scan: n => 'Scan to pay ' + n + ' THB with PromptPay, then send the slip in this chat.', none: 'Nothing to pay',
+    cash: 'Pay cash when you receive your drinks', later: 'We will send payment details in this chat', alt: 'Order ',
+  },
+};
+
 function receiptFlex_(po, s) {
+  const L = RECEIPT_TEXT_[po.lang === 'en' ? 'en' : 'th'];
   const C = { ink: '#2A1E17', muted: '#7A6A5E', roast: '#4A2E21', pandan: '#3F7A4E', line: '#E6DDD2' };
-  const baht = n => n.toLocaleString('en-US') + ' บาท';
+  const baht = n => n.toLocaleString('en-US') + L.baht;
   const sep = { type: 'separator', margin: 'md', color: C.line };
   const kv = (k, v, style) => ({
     type: 'box', layout: 'horizontal', spacing: 'md', margin: 'sm', contents: [
@@ -118,25 +134,25 @@ function receiptFlex_(po, s) {
       { type: 'text', text: String(l.total), size: 'sm', color: C.ink, align: 'end', flex: 0 },
     ],
   }));
-  const body = [kv('รอบ', po.when), kv('สถานที่', po.where), sep].concat(items, [sep, kv('ยอดรวม', baht(po.subtotal))]);
-  if (po.discount) body.push(kv('ส่วนลด', '−' + baht(po.discount), { color: C.pandan }));
-  if (po.deliveryFee) body.push(kv('ค่าส่ง', baht(po.deliveryFee)));
-  body.push(kv('ยอดชำระ', baht(po.total), { weight: 'bold', size: 'lg', color: C.roast }));
+  const body = [kv(L.when, po.when), kv(L.where, po.where), sep].concat(items, [sep, kv(L.subtotal, baht(po.subtotal))]);
+  if (po.discount) body.push(kv(L.discount, '−' + baht(po.discount), { color: C.pandan }));
+  if (po.deliveryFee) body.push(kv(L.fee, baht(po.deliveryFee)));
+  body.push(kv(L.total, baht(po.total), { weight: 'bold', size: 'lg', color: C.roast }));
 
   const note = (text) => ({ type: 'text', text, size: 'xs', color: C.muted, wrap: true, align: 'center' });
   const footer = po.pay === 'promptpay' && s.promptpay && po.total > 0
     ? [{ type: 'image', url: 'https://promptpay.io/' + s.promptpay + '/' + po.total + '.png', size: 'lg', aspectRatio: '1:1' },
-       note('สแกนจ่ายพร้อมเพย์ ' + po.total + ' บาท แล้วส่งสลิปในแชทนี้ได้เลย')]
-    : [note(po.total <= 0 ? 'ไม่มียอดที่ต้องชำระ' : po.pay === 'cash' ? 'ชำระเงินสดตอนรับเครื่องดื่ม' : 'ร้านจะส่งช่องทางชำระเงินให้ในแชทนี้')];
+       note(L.scan(po.total))]
+    : [note(po.total <= 0 ? L.none : po.pay === 'cash' ? L.cash : L.later)];
 
   return {
     type: 'flex',
-    altText: 'ออเดอร์ ' + po.no + ' · ' + po.total + ' บาท',
+    altText: L.alt + po.no + ' · ' + po.total + L.baht,
     contents: {
       type: 'bubble',
       header: {
         type: 'box', layout: 'vertical', backgroundColor: C.roast, paddingAll: '16px', contents: [
-          { type: 'text', text: (s.shopName || 'ใบสั่งซื้อ') + ' · ใบสั่งซื้อ', size: 'xs', color: '#E9C9A8' },
+          { type: 'text', text: (s.shopName ? s.shopName + ' · ' : '') + L.order, size: 'xs', color: '#E9C9A8' },
           { type: 'text', text: po.no, size: 'lg', weight: 'bold', color: '#FFFFFF' },
         ],
       },
