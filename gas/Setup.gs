@@ -9,6 +9,8 @@ const HEADERS = {
   Orders: ['orderNo', 'createdAt', 'status', 'paid', 'date', 'slot', 'mode', 'location', 'drop', 'locNote', 'displayName', 'phone',
     'itemsText', 'cups', 'subtotal', 'discount', 'deliveryFee', 'total', 'pay', 'code', 'usedFreeCup', 'note',
     'stampsEarned', 'items', 'userId', 'receipt', 'notified', 'lang'],
+  Admins: ['userId', 'displayName', 'role', 'active', 'createdAt', 'createdBy', 'lastLoginAt'],
+  AuditLog: ['timestamp', 'userId', 'displayName', 'role', 'action', 'targetType', 'targetId', 'before', 'after'],
 };
 
 const DEFAULT_SETTINGS = [
@@ -98,6 +100,7 @@ function setup() {
   checkboxes_(SHEETS.codes, ['newCustomerOnly', 'active', 'banner']);
   addMissingCodes_();
   checkboxes_(SHEETS.orders, ['paid']);
+  checkboxes_(SHEETS.admins, ['active']);
   const ot = ss.getSheetByName(SHEETS.orders);
   ot.getRange(2, HEADERS.Orders.indexOf('status') + 1, ot.getMaxRows() - 1).setDataValidation(
     SpreadsheetApp.newDataValidation().requireValueInList(Object.keys(STATUS).map(k => STATUS[k]), true).build());

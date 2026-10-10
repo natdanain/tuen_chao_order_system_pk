@@ -5,7 +5,15 @@
  *   - LINE webhook:   POST {destination, events:[...]}   (only needed when receiptMode = reply)
  */
 
-const ACTIONS = { init: init_, checkCode: checkCode_, order: order_, pushReceipt: pushReceipt_ };
+const ACTIONS = {
+  init: init_, checkCode: checkCode_, order: order_, pushReceipt: pushReceipt_,
+  adminInit: adminInit_, adminListOrders: adminListOrders_,
+  adminUpdateOrderStatus: adminUpdateOrderStatus_, adminSetPaid: adminSetPaid_,
+  adminToggleMenu: adminToggleMenu_, adminUpdateMenu: adminUpdateMenu_,
+  adminUpdateSettings: adminUpdateSettings_, adminListStaff: adminListStaff_,
+  adminSaveStaff: adminSaveStaff_, adminSetStaffActive: adminSetStaffActive_,
+  adminListAuditLog: adminListAuditLog_,
+};
 
 // Language of customer-facing text for the current request ('th' | 'en'), set from body.lang.
 // The sheet always stores Thai; English only changes what the customer reads.

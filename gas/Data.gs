@@ -1,7 +1,10 @@
 /** Sheet + value helpers. Every sheet is a table: row 1 = headers, one record per row. */
 
 const TZ = 'Asia/Bangkok';
-const SHEETS = { menu: 'Menu', settings: 'Settings', codes: 'Codes', customers: 'Customers', orders: 'Orders' };
+const SHEETS = {
+  menu: 'Menu', settings: 'Settings', codes: 'Codes', customers: 'Customers', orders: 'Orders',
+  admins: 'Admins', audit: 'AuditLog',
+};
 const STATUS = {
   NEW: 'ใหม่', VERIFYING: 'รอตรวจสอบ', MAKING: 'กำลังทำ', READY: 'พร้อมส่ง',
   DELIVERING: 'กำลังส่ง', DONE: 'ส่งแล้ว', CANCEL: 'ยกเลิก',

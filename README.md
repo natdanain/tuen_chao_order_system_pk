@@ -7,8 +7,11 @@ docs/            หน้า LIFF (โฮสต์บน GitHub Pages)
   index.html     หน้าสั่งเครื่องดื่ม
   config.js      ใส่ LIFF_ID และ GAS_URL
   demo.js        ข้อมูลตัวอย่าง (ใช้เมื่อ GAS_URL ว่าง หรือเปิด ?demo)
+  admin.html     หน้าหลังร้านสำหรับ OWNER / KITCHEN
+  admin-config.js ใส่ LIFF ID แอดมินและ GAS_URL เดิม
 gas/             โค้ด Apps Script (ผูกกับ Google Sheet)
   Code.gs        API: init / checkCode / order / pushReceipt + ทริกเกอร์แก้สถานะ
+  Admin.gs       API หลังร้าน, ตรวจ role และ Audit Log
   Line.gs        ตรวจ ID token, ส่งข้อความ, webhook, Flex ใบเสร็จ
   Data.gs        อ่าน/เขียนชีต, ตั้งค่า, รอบส่ง
   Setup.gs       setup() สร้างชีต + ข้อมูลเริ่มต้น, testLine()
@@ -92,6 +95,20 @@ gas/             โค้ด Apps Script (ผูกกับ Google Sheet)
 ---
 
 ## ใช้งานประจำวัน (ฝั่งร้าน)
+
+### หน้าจอแอดมิน
+
+ระบบมีหน้าแอดมินที่ `docs/admin.html` สำหรับดูออเดอร์ เปลี่ยนสถานะ ยืนยันยอด เปิด–ปิดเมนู และตั้งค่าร้าน โดยตรวจสิทธิ์จาก LINE user ID ที่ Apps Script ทุกคำขอ
+
+ขั้นตอนเปิดใช้ครั้งแรก:
+
+1. รัน `setup()` อีกครั้ง เพื่อเพิ่มชีต `Admins` และ `AuditLog`
+2. Apps Script › Script properties เพิ่ม `ADMIN_OWNER_USER_ID` เป็น LINE user ID ของเจ้าของร้าน
+3. สร้าง LIFF app ใหม่ใน LINE Login channel เดิม โดยตั้ง endpoint เป็น URL GitHub Pages ที่ลงท้าย `/admin.html`
+4. ใส่ LIFF ID ที่ได้ใน `docs/admin-config.js`
+5. push หน้าเว็บ และ deploy Apps Script เป็นเวอร์ชันใหม่
+
+ทดสอบหน้าตาโดยไม่แตะข้อมูลจริงได้ที่ `admin.html?demo` คู่มือฉบับเต็มอยู่ใน `ADMIN_PANEL_GUIDE.md`
 
 | อยากทำ | แก้ตรงไหน |
 |---|---|
