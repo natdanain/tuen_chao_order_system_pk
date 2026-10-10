@@ -127,6 +127,11 @@ textarea{resize:vertical;min-height:64px}
 .bar .err{max-width:448px;margin:0 auto 8px;font-size:13px}
 .cta{border:0;border-radius:14px;background:var(--pandan);color:#fff;padding:13px 22px;font-family:var(--f-display);font-size:16px}
 .cta:disabled{opacity:.4;cursor:not-allowed}
+.cart-notice{position:fixed;z-index:9;left:50%;bottom:94px;transform:translate(-50%,18px);width:min(416px,calc(100% - 32px));background:var(--ink);color:var(--surface);border-radius:14px;padding:11px 14px;box-shadow:0 10px 28px rgba(20,12,8,.24);opacity:0;pointer-events:none;transition:.2s;text-align:center;font-size:13px}
+.cart-notice.on{opacity:1;transform:translate(-50%,0)}
+.submit-lock{position:fixed;inset:0;z-index:30;background:rgba(30,20,15,.48);display:grid;place-items:center;padding:24px;backdrop-filter:blur(2px)}
+.submit-lock .box{width:min(320px,100%);background:var(--surface);border-radius:20px;padding:24px 20px;text-align:center;box-shadow:0 18px 48px rgba(20,12,8,.28)}
+.submit-lock b{display:block;margin-top:12px;font-family:var(--f-display);font-size:18px}.submit-lock small{display:block;color:var(--muted);margin-top:4px}
 .invalid{border-color:var(--danger)!important;box-shadow:0 0 0 1px var(--danger)}
 .slots.invalid,.chips.invalid{border:1px solid var(--danger);border-radius:14px;padding:6px}
 .sheet-bg.dlg-bg{align-items:center;padding:16px}
@@ -220,12 +225,13 @@ const T = {
     summary:"สรุปรายการ", empty:"ยังไม่มีเครื่องดื่มในตะกร้า กด + ที่เมนูด้านบน", less:"ลด", more:"เพิ่ม",
     sumDeliver:"ส่ง", sumPickup:"รับ", asapShort:"เร็วที่สุด", noSlot:"ยังไม่เลือกรอบ", where:"สถานที่",
     fee:"ค่าส่ง", free:"ฟรี", discount:"ส่วนลด", freeCup:"แก้วฟรี", total:"ยอดชำระ", cups:n=>`${n} แก้ว`,
-    submit:"สั่งเครื่องดื่ม", sending:"กำลังส่ง…",
+    submit:"สั่งเครื่องดื่ม", sending:"กำลังส่ง…", submitWait:"กำลังส่งคำสั่งซื้อ", submitWaitHint:"กรุณารอสักครู่และอย่าปิดหน้านี้",
     missClosed:"ร้านปิดรับชั่วคราว", missCart:"ยังไม่ได้เลือกเครื่องดื่ม", missDay:"วันนี้ปิดรับแล้ว", missSlot:"ยังไม่ได้เลือกรอบ",
     missPlace:"ยังไม่ได้เลือกสถานที่ส่ง", missPhone:"กรอกเบอร์โทรด้วยนะ",
     slotGone:"รอบที่เลือกปิดรับแล้ว เลือกรอบใหม่อีกครั้ง", itemsGone:"บางเมนูไม่พร้อมให้บริการแล้ว เอาออกจากตะกร้าให้แล้ว",
     sweet:"ความหวาน", sweetReq:"จำเป็น · เลือก 1 อย่าง", rec:"แนะนำ", sweetNa:"ไม่มีสำหรับเมนูนี้",
     extras:"เพิ่มเติม", itemNote:"หมายเหตุถึงร้าน", itemNotePh:"เช่น น้ำแข็งน้อย", cancel:"ยกเลิก", addCart:"ใส่ตะกร้า",
+    addedCart:(n,q,again)=>again?`เพิ่ม${n}อีก 1 แก้วแล้ว · รายการนี้รวม ${q} แก้ว`:`เพิ่ม${n}ลงตะกร้าแล้ว`,
     thanks:"ขอบคุณที่สั่งนะคะ ☕ ร้านได้รับออเดอร์แล้ว ใบสั่งซื้อส่งเข้าแชท LINE ของร้านด้วย",
     order:"ใบสั่งซื้อ", when:"รอบ", subtotal:"ยอดรวม", baht:n=>`${n} บาท`,
     transfer:n=>`โอนยอด <b>${n} บาท</b><br>แล้วส่งสลิปในแชทร้านได้เลย`, bank:"ธนาคาร", accountName:"ชื่อบัญชี", accountNo:"เลขบัญชี", qrAlt:n=>`QR ชำระเงิน ${n} บาท`,
@@ -259,12 +265,13 @@ const T = {
     summary:"Order summary", empty:"Your cart is empty. Tap + on a drink above.", less:"Less", more:"More",
     sumDeliver:"Delivery", sumPickup:"Pick-up", asapShort:"As soon as ready", noSlot:"No time chosen", where:"Deliver to",
     fee:"Delivery fee", free:"Free", discount:"Discount", freeCup:"free drink", total:"Total", cups:n=>`${n} drink${n===1?"":"s"}`,
-    submit:"Place order", sending:"Sending…",
+    submit:"Place order", sending:"Sending…", submitWait:"Sending your order", submitWaitHint:"Please wait and keep this page open",
     missClosed:"The shop is closed right now", missCart:"No drinks chosen yet", missDay:"Closed for today", missSlot:"Choose a delivery time",
     missPlace:"Choose a delivery place", missPhone:"Enter your phone number",
     slotGone:"That time is now closed. Please choose another.", itemsGone:"Some drinks are no longer available and were removed from your cart.",
     sweet:"Sweetness", sweetReq:"Required · choose 1", rec:"Recommended", sweetNa:"Not for this drink",
     extras:"Extras", itemNote:"Note", itemNotePh:"e.g. less ice", cancel:"Cancel", addCart:"Add to cart",
+    addedCart:(n,q,again)=>again?`Added another ${n} · ${q} in your cart`:`Added ${n} to your cart`,
     thanks:"Thank you ☕ We've got your order. A receipt has also been sent to our LINE chat.",
     order:"Order", when:"Time", subtotal:"Subtotal", baht:n=>`${n} THB`,
     transfer:n=>`Transfer <b>${n} THB</b><br>then send the slip in our chat`, bank:"Bank", accountName:"Account name", accountNo:"Account", qrAlt:n=>`Payment QR ${n} THB`,
@@ -305,7 +312,7 @@ const slotNote = x=>!x.open ? t(x.reason==="full"?"slotFull":x.reason==="preorde
 const S = {
   mode:"deliver", day:0, slot:null, loc:"", drop:"", floor:"", room:"", locNote:"", phone:"", note:"",
   code:"", applied:null, codeErr:"", codeBusy:false, pay:"bank", useFree:false,
-  cart:[], tab:"round", sheet:null, done:null, busy:false, err:"",
+  cart:[], tab:"round", sheet:null, done:null, busy:false, err:"", notice:"",
   popup:null,   // list of missing fields shown after tapping "order" too early
   tried:false,  // after the first order attempt, outline the fields still missing
   cust:{name:"", orders:0, stamps:0, freeCups:0}
@@ -521,7 +528,8 @@ function render(){
 
   <div class="bar" id="bar">${barHtml()}</div>
   ${S.sheet? sheetHtml():''}
-  ${S.popup? popupHtml():''}`;
+  ${S.popup? popupHtml():''}
+  <div class="cart-notice ${S.notice?'on':''}" id="cartNotice" role="status" aria-live="polite">${esc(S.notice)}</div>`;
   bind();
   markMissing();
 }
@@ -614,8 +622,12 @@ function bind(){
       const extras=[...document.querySelectorAll('input[name=ex]:checked')].map(i=>C.extras[+i.value]);
       const note=$("#itemNote").value.trim();
       const same=S.cart.find(l=>l.m.id===m.id&&l.sweet===sweet&&l.note===note&&JSON.stringify(l.extras)===JSON.stringify(extras));
-      same? same.qty++ : S.cart.push({m,sweet,extras,note,qty:1});
+      if(same) same.qty++; else S.cart.push({m,sweet,extras,note,qty:1});
+      const qty=same?same.qty:1;
+      S.notice=t("addedCart",mName(m),qty,!!same);
       S.sheet=null; render();
+      clearTimeout(bind.noticeTimer);
+      bind.noticeTimer=setTimeout(()=>{S.notice="";const n=$("#cartNotice");if(n)n.classList.remove("on")},2400);
     };
   }
 }
@@ -634,7 +646,7 @@ async function submit(){
   if(S.busy) return;
   const miss = missingList();
   if(miss.length){ S.tried = true; S.popup = miss; return render(); }
-  S.busy=true; S.err=""; refreshBar();
+  S.busy=true; S.err=""; refreshBar(); setSubmitLock(true);
   const day=C.days[S.day];
   try{
     const r = await api("order", {order:{
@@ -652,7 +664,14 @@ async function submit(){
     // slots / menu / codes may have changed under us — refresh but keep the cart
     try{ const r = await api("init"); applyConfig(r.config); S.cust = {...S.cust, ...r.customer}; }catch(_){}
   }
-  S.busy=false; render();
+  S.busy=false; setSubmitLock(false); render();
+}
+
+function setSubmitLock(on){
+  const old=$("#submitLock");
+  if(!on){ if(old) old.remove(); return; }
+  if(old) return;
+  document.body.insertAdjacentHTML("beforeend",`<div class="submit-lock" id="submitLock" role="alert" aria-live="assertive"><div class="box"><div class="spin"></div><b>${esc(t("submitWait"))}</b><small>${esc(t("submitWaitHint"))}</small></div></div>`);
 }
 
 // receiptMode = reply: the customer "says" the order number in chat and the bot replies with the receipt (free).

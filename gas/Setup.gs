@@ -46,7 +46,8 @@ const DEFAULT_SETTINGS = [
   ['firstOrderTransferOnly', 'TRUE', 'TRUE = ออเดอร์แรกต้องโอนบัญชีก่อน'],
   ['stampGoal', '10', 'สะสมครบกี่แก้วได้ฟรี 1 แก้ว'],
   ['receiptMode', 'push', 'push = ร้านส่งใบเสร็จเอง (ใช้โควตาข้อความ) / reply = ตอบกลับฟรี (ต้องตั้ง webhook)'],
-  ['adminTo', '', 'userId หรือ groupId ที่รับแจ้งเตือนออเดอร์ใหม่ (เว้นว่าง = ไม่แจ้ง)'],
+  ['adminTo', '', 'userId/groupId ที่รับแจ้งเตือน หลายปลายทางคั่นด้วย | (เว้นว่าง = ไม่แจ้ง)'],
+  ['adminLiffUrl', 'https://liff.line.me/2011923710-OxWMZaO8', 'ลิงก์เปิดหน้าแอดมินจากข้อความแจ้งออเดอร์ใหม่'],
   ['notifyCustomerOnStatus', 'TRUE', 'แจ้งลูกค้าเมื่อร้านรับยอด กำลังทำ พร้อมส่ง กำลังส่ง ส่งแล้ว หรือยกเลิก'],
   // English display text — lists must be in the same order as the Thai ones
   ['shopSubEn', 'TUEN_CHAO · Home Cafe', 'คำโปรยภาษาอังกฤษ'],
@@ -169,8 +170,9 @@ function testLine() {
   });
   console.log('bot info', res.getResponseCode(), res.getContentText());
   const s = settings_();
-  if (s.adminTo) {
-    push_(s.adminTo, [{ type: 'text', text: 'ทดสอบจากระบบสั่งกาแฟ ✓' }]);
-    console.log('ส่งข้อความทดสอบไปที่ adminTo แล้ว');
-  }
+  lineTargets_(s.adminTo).forEach(to => {
+    push_(to, [{ type: 'text', text: 'ทดสอบจากระบบสั่งกาแฟ ✓' +
+      (s.adminLiffUrl ? '\n\n📋 เปิดหน้าแอดมิน\n' + s.adminLiffUrl : '') }]);
+    console.log('ส่งข้อความทดสอบไปที่ ' + to + ' แล้ว');
+  });
 }

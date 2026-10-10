@@ -224,9 +224,10 @@ function order_(b) {
     lock.releaseLock();
   }
 
-  if (s.adminTo) {
-    try { push_(s.adminTo, [{ type: 'text', text: adminText_(order) }]); } catch (e) { console.error(e); }
-  }
+  lineTargets_(s.adminTo).forEach(to => {
+    try { push_(to, [{ type: 'text', text: adminText_(order, s) }]); }
+    catch (e) { console.error('admin notification failed for ' + to, e); }
+  });
   let receiptSent = false;
   if (s.receiptMode === 'push') {
     try { receiptSent = sendReceipt_(order.orderNo, user.userId, null); } catch (e) { console.error(e); }
@@ -240,7 +241,7 @@ function pushReceipt_(b) {
   return { sent: sendReceipt_(str_(b.orderNo), user.userId, null) };
 }
 
-function adminText_(o) {
+function adminText_(o, s) {
   const po = publicOrder_(o, null, 'th'); // the shop always reads Thai
   return '🛎 ออเดอร์ใหม่ ' + po.no + (o.lang === 'en' ? ' (ลูกค้าใช้ภาษาอังกฤษ)' : '') + '\n' +
     (o.mode === 'deliver' ? 'ส่ง ' : 'รับ ') + po.when + '\n📍 ' + po.where + '\n\n' +
@@ -248,7 +249,8 @@ function adminText_(o) {
     'ยอด ' + o.total + ' บาท · ' + (o.pay === 'cash' ? 'เงินสด' : 'โอนบัญชีกสิกร') +
     (o.code ? ' (โค้ด ' + o.code + ' −' + o.discount + ')' : '') + '\n' +
     '👤 ' + o.displayName + ' ' + o.phone +
-    (o.note ? '\n📝 ' + o.note : '');
+    (o.note ? '\n📝 ' + o.note : '') +
+    (s && s.adminLiffUrl ? '\n\n📋 เปิดหน้าแอดมิน\n' + s.adminLiffUrl : '');
 }
 
 // ---------- owner edits the Orders sheet (installable onEdit trigger, see setup) ----------

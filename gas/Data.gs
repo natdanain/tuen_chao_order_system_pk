@@ -50,6 +50,9 @@ function num_(v) { return Number(v) || 0; }
 function bool_(v) { return v === true || /^(true|yes|y|1|ใช่|เปิด)$/i.test(str_(v)); }
 function on_(v) { return v === '' || v == null ? true : bool_(v); } // blank "active" cell = on
 function list_(v, sep) { return str_(v).split(sep).map(x => x.trim()).filter(Boolean); }
+function lineTargets_(v) {
+  return Array.from(new Set(str_(v).split(/[|,\n]+/).map(x => x.trim()).filter(Boolean)));
+}
 function fmt_(d, pattern) { return Utilities.formatDate(d, TZ, pattern); }
 
 function normTime_(t) {
@@ -107,6 +110,7 @@ function settings_() {
     stampGoal: Math.max(1, n('stampGoal', 10)),
     receiptMode: str_(raw.receiptMode) === 'reply' ? 'reply' : 'push',
     adminTo: str_(raw.adminTo),
+    adminLiffUrl: /^https:\/\//i.test(str_(raw.adminLiffUrl)) ? str_(raw.adminLiffUrl) : '',
     notifyCustomerOnStatus: bool_(raw.notifyCustomerOnStatus),
     // English display text (same order as the Thai lists above)
     shopSubEn: str_(raw.shopSubEn),

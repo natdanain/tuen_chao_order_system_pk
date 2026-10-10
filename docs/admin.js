@@ -13,6 +13,12 @@ async function api(action, data={}){
   return body;
 }
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove("on"),2600); }
+function busyOverlay(show,label="กำลังบันทึกข้อมูล…"){
+  const old=$("#busy-overlay");
+  if(!show){if(old)old.remove();return}
+  if(old)return;
+  document.body.insertAdjacentHTML("beforeend",`<div class="busyoverlay" id="busy-overlay" role="alert" aria-live="assertive"><div class="busybox"><span></span><b>${esc(label)}</b><small>กรุณารอสักครู่</small></div></div>`);
+}
 function fatal(msg){ $("#app").innerHTML=`<div class="fatal"><h1>เปิดหลังร้านไม่ได้</h1><p>${esc(msg)}</p></div>`; }
 function isOwner(){ return S.data?.admin?.role === "OWNER"; }
 
@@ -134,10 +140,22 @@ async function submitSettings(e){ e.preventDefault(); const f=new FormData(e.cur
 async function submitMenu(e){ e.preventDefault(); const f=new FormData(e.currentTarget), menu={}; ["name","nameEn","category","categoryEn","price","bestRank","sweetOff","imageUrl"].forEach(k=>menu[k]=f.get(k)||""); const id=S.modal.id; S.modal=null; await mutate(()=>api("adminUpdateMenu",{menuId:id,menu}),"บันทึกเมนูแล้ว",true); }
 async function submitStaff(e){ e.preventDefault(); const f=new FormData(e.currentTarget); const staff={userId:f.get("userId"),displayName:f.get("displayName"),role:f.get("role"),active:true}; S.modal=null; await mutate(async()=>{const r=await api("adminSaveStaff",{staff});S.data.staff=r.staff;return r},"เพิ่มพนักงานแล้ว"); }
 async function toggleStaff(b){ const active=b.dataset.active!=="true"; await mutate(async()=>{const r=await api("adminSetStaffActive",{userId:b.dataset.staffToggle,active});S.data.staff=r.staff;return r},active?"เปิดสิทธิ์แล้ว":"ปิดสิทธิ์แล้ว"); }
+function mergeMutationResult(r){
+  if(r.order&&Array.isArray(S.data.orders)){const i=S.data.orders.findIndex(x=>x.orderNo===r.order.orderNo);if(i>=0)S.data.orders[i]=r.order}
+  if(r.menu&&Array.isArray(S.data.menu)){const i=S.data.menu.findIndex(x=>x.id===r.menu.id);if(i>=0)S.data.menu[i]=r.menu}
+  if(r.settings)S.data.settings={...S.data.settings,...r.settings};
+  if(r.dashboard)S.data.dashboard=r.dashboard;
+}
 async function mutate(fn,msg,full=false){
-  if(S.busy)return; S.busy=true;
-  try{ const r=await fn(); if(r.warning) toast(r.warning); else toast(msg); if(full||S.tab!=="staff"){const fresh=await api("adminInit",{date:S.date});S.data={...S.data,...fresh};if(S.tab==="orders"&&S.status)S.data.orders=(await api("adminListOrders",{date:S.date,status:S.status})).orders} render(); }
-  catch(e){toast(e.message);render()} finally{S.busy=false}
+  if(S.busy)return; S.busy=true; busyOverlay(true);
+  try{
+    const r=await fn(), notice=r.warning||msg; mergeMutationResult(r); render();
+    if(full||S.tab!=="staff"){
+      try{const fresh=await api("adminInit",{date:S.date});S.data={...S.data,...fresh};if(S.tab==="orders"&&S.status)S.data.orders=(await api("adminListOrders",{date:S.date,status:S.status})).orders;render();toast(notice)}
+      catch(_){toast(notice+" · แต่รีเฟรชข้อมูลไม่สำเร็จ กดรีเฟรชอีกครั้ง")}
+    }else toast(notice);
+  }
+  catch(e){toast(e.message);render()} finally{S.busy=false;busyOverlay(false)}
 }
 
 boot();
