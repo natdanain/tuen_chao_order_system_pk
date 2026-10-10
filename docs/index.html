@@ -211,7 +211,7 @@ const T = {
     slotClosed:"ปิดรับแล้ว", slotFull:"เต็มแล้ว", left:n=>`เหลือ ${n} แก้ว`, time:t=>`${t} น.`,
     orderBy:t=>`สั่งก่อน ${t} น.`, preorderOnly:"สั่งล่วงหน้าเท่านั้น",
     codeUntil:d=>`ถึง ${d}`, useCode:c=>`ใส่โค้ด ${c}`, applyThis:"ใช้โค้ดนี้", codeNeedCups:(c,n)=>`โค้ด ${c} ต้องซื้อครบ ${n} แก้ว (เพิ่มอีก ${n-count()} แก้ว)`,
-    missTitle:"ยังกรอกข้อมูลไม่ครบ", ok:"ตกลง", missFloor:"กรอกชั้น", missRoomNo:"กรอกเลขห้อง", badPhone:"เบอร์โทรไม่ถูกต้อง (10 หลัก ขึ้นต้นด้วย 0)",
+    missTitle:"ยังกรอกข้อมูลไม่ครบ", ok:"ตกลง", closedTitle:"ร้านปิดรับออเดอร์ชั่วคราว", missFloor:"กรอกชั้น", missRoomNo:"กรอกเลขห้อง", badPhone:"เบอร์โทรไม่ถูกต้อง (10 หลัก ขึ้นต้นด้วย 0)",
     noDays:"ช่วงนี้ยังไม่มีรอบเปิดรับ", place:"สถานที่ส่ง", choosePlace:"— เลือกสถานที่ —", dropTitle:"วิธีส่ง",
     floor:"ชั้น", room:"ห้อง", floorPh:"เช่น 5", roomPh:"เช่น 512", roomText:(f,r)=>`ชั้น ${f} ห้อง ${r}`,
     locNote:"จุดรับเพิ่มเติม", locNotePh:"เช่น ห้อง 204 / ชั้น 2 หน้าลิฟต์",
@@ -251,7 +251,7 @@ const T = {
     slotClosed:"Closed", slotFull:"Full", left:n=>`${n} left`, time:t=>t,
     orderBy:t=>`Order by ${t}`, preorderOnly:"Pre-order only",
     codeUntil:d=>`until ${d}`, useCode:c=>`Use code ${c}`, applyThis:"Use this code", codeNeedCups:(c,n)=>`Code ${c} needs ${n} drinks (add ${n-count()} more)`,
-    missTitle:"A few things are missing", ok:"OK", missFloor:"Enter your floor", missRoomNo:"Enter your room number", badPhone:"Invalid phone number (10 digits starting with 0)",
+    missTitle:"A few things are missing", ok:"OK", closedTitle:"We're closed for now", missFloor:"Enter your floor", missRoomNo:"Enter your room number", badPhone:"Invalid phone number (10 digits starting with 0)",
     noDays:"No delivery times available right now", place:"Deliver to", choosePlace:"— Choose a place —", dropTitle:"Delivery option",
     floor:"Floor", room:"Room", floorPh:"e.g. 5", roomPh:"e.g. 512", roomText:(f,r)=>`Floor ${f}, Room ${r}`,
     locNote:"Delivery note", locNotePh:"e.g. Room 204, 2nd floor by the lift",
@@ -393,23 +393,48 @@ async function api(action, data={}){
 async function boot(){
   document.documentElement.lang = LANG;
   renderState(t("loading"), true);
+  // Check the open/closed flag first, in parallel with LIFF start-up (no login needed)
+  const status = api("status").catch(()=>null);
   try{
     if(!DEMO){
-      await liff.init({liffId:CFG.LIFF_ID, withLoginOnExternalBrowser:true});
-      if(!liff.isLoggedIn()){ liff.login({redirectUri:location.href}); return; }
+      await liff.init({liffId:CFG.LIFF_ID});
       if(!langChosen) LANG = (liff.getLanguage()||"th").toLowerCase().startsWith("th") ? "th" : "en";
       document.documentElement.lang = LANG;
+    }
+    const st = await status;
+    if(st && !st.acceptingOrders) return showClosed((LANG==="en" && st.closedMessageEn) || st.closedMessage);
+    if(!DEMO){
+      if(!liff.isLoggedIn()){ liff.login({redirectUri:location.href}); return; }
       idToken = liff.getIDToken();
       if(!idToken) throw new Error(t("noOpenid"));
     }
     const r = await api("init");
     applyConfig(r.config);
+    if(!C.acceptingOrders) return showClosed(closedMsg());
     applyCustomer(r.customer);
     document.title = C.shopName + " " + t("title");
     render();
   }catch(e){
     renderState(e.message || String(e), false, true);
   }
+}
+
+// Shop closed: block the whole page with a popup; OK closes the LIFF window
+function showClosed(msg){
+  $("#app").innerHTML = `<div class="state"><div><div class="logo" style="margin:auto">${logoSvg()}</div></div></div>
+  <div class="sheet-bg dlg-bg"><div class="dlg" role="alertdialog" aria-labelledby="closedT" aria-describedby="closedM">
+    <h3 id="closedT">${t("closedTitle")}</h3>
+    <p id="closedM" style="margin:10px 0 16px;line-height:1.6">${esc(msg)}</p>
+    <button class="cta" id="closedOk" style="width:100%">${t("ok")}</button>
+  </div></div>`;
+  const ok = $("#closedOk");
+  ok.focus();
+  ok.onclick = ()=>{
+    if(!DEMO && liff.isInClient()) return liff.closeWindow();
+    window.close();
+    // outside LINE the tab may refuse to close; leave the message on screen
+    renderState(msg, false, true);
+  };
 }
 
 function applyConfig(cfg){
@@ -715,7 +740,7 @@ function renderDone(){
   $("#again").onclick=async()=>{
     Object.assign(S,{done:null,cart:[],applied:null,code:"",codeErr:"",useFree:false,pay:"bank",note:"",slot:null,err:"",floor:"",room:"",locNote:"",tried:false});
     render();
-    try{ const r=await api("init"); applyConfig(r.config); S.cust={...S.cust,...r.customer}; render(); }catch(_){}
+    try{ const r=await api("init"); applyConfig(r.config); S.cust={...S.cust,...r.customer}; if(!C.acceptingOrders) return showClosed(closedMsg()); render(); }catch(_){}
   };
 }
 

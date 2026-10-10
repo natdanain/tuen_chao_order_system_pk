@@ -6,7 +6,7 @@
  */
 
 const ACTIONS = {
-  init: init_, checkCode: checkCode_, order: order_, pushReceipt: pushReceipt_,
+  status: status_, init: init_, checkCode: checkCode_, order: order_, pushReceipt: pushReceipt_,
   adminInit: adminInit_, adminListOrders: adminListOrders_,
   adminUpdateOrderStatus: adminUpdateOrderStatus_, adminSetPaid: adminSetPaid_,
   adminToggleMenu: adminToggleMenu_, adminUpdateMenu: adminUpdateMenu_,
@@ -53,6 +53,12 @@ function fail_(th, en) {
 }
 
 // ---------- actions ----------
+
+/** First call the order page makes, before LINE login: is the shop taking orders? No ID token needed. */
+function status_() {
+  const s = settings_();
+  return { acceptingOrders: s.acceptingOrders, closedMessage: s.closedMessage, closedMessageEn: s.closedMessageEn };
+}
 
 function init_(b) {
   const user = auth_(b.idToken);

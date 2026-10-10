@@ -65,6 +65,7 @@ window.DemoApi = (() => {
   return async (action, data) => {
     await new Promise(r => setTimeout(r, 250));
     const en = data.lang === "en";
+    if (action === "status") return {acceptingOrders:cfg.acceptingOrders, closedMessage:cfg.closedMessage, closedMessageEn:cfg.en.closedMessage};
     if (action === "init") return {config:{...cfg, days:days()}, customer:{...cust}};
     if (action === "checkCode") return {code:checkCode(data.code, data.lang)};
     if (action === "order") {
