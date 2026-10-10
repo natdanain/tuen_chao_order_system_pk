@@ -45,15 +45,33 @@ function reply_(replyToken, messages) { lineApi_('reply', { replyToken, messages
 
 /**
  * Apps Script cannot read request headers, so X-Line-Signature is not verified.
- * That is acceptable here: every handler only *replies* via the event's replyToken,
- * which LINE rejects unless the event is genuine.
+ * State changes happen only after a reply via the event's replyToken succeeds;
+ * LINE rejects that token unless the event is genuine.
  */
 function handleWebhook_(events) {
   events.forEach(ev => {
     try {
-      if (ev.type !== 'message' || !ev.message || ev.message.type !== 'text') return;
-      const text = ev.message.text.trim();
+      if (ev.type !== 'message' || !ev.message) return;
       const src = ev.source || {};
+      if (ev.message.type === 'image' && src.userId) {
+        const ot = table_(SHEETS.orders);
+        const r = ot.rows.slice().reverse().find(x => str_(x.userId) === src.userId &&
+          str_(x.pay) !== 'cash' && !bool_(x.paid) && str_(x.status) !== STATUS.CANCEL && str_(x.status) !== STATUS.DONE);
+        if (!r) return;
+        const en = str_(r.lang) === 'en';
+        const no = str_(r.orderNo);
+        reply_(ev.replyToken, [{ type: 'text', text: en
+          ? '🧾 We received your slip for order ' + no + '. We are checking the payment and will update you here.'
+          : '🧾 ได้รับสลิปของออเดอร์ ' + no + ' แล้วค่ะ กำลังตรวจสอบยอด แล้วจะแจ้งผลในแชทนี้นะคะ' }]);
+        const notified = str_(r.notified).split(',').filter(Boolean);
+        update_(ot, r, {
+          status: STATUS.VERIFYING,
+          notified: notified.indexOf(STATUS.VERIFYING) >= 0 ? notified.join(',') : notified.concat(STATUS.VERIFYING).join(','),
+        });
+        return;
+      }
+      if (ev.message.type !== 'text') return;
+      const text = ev.message.text.trim();
       const m = /(?:ยืนยันออเดอร์|Confirm order)\s+(ORD-\d{8}-\d{3})/i.exec(text);
       if (m && src.userId) {
         sendReceipt_(m[1], src.userId, ev.replyToken);
@@ -103,12 +121,12 @@ function stampMsg_(stamps, freeCups, goal, lang) {
 const RECEIPT_TEXT_ = {
   th: {
     order: 'ใบสั่งซื้อ', when: 'รอบ', where: 'สถานที่', subtotal: 'ยอดรวม', discount: 'ส่วนลด', fee: 'ค่าส่ง', total: 'ยอดชำระ',
-    baht: ' บาท', scan: n => 'สแกนจ่ายพร้อมเพย์ ' + n + ' บาท แล้วส่งสลิปในแชทนี้ได้เลย', none: 'ไม่มียอดที่ต้องชำระ',
+    baht: ' บาท', transfer: n => 'โอนยอด ' + n + ' บาท แล้วส่งสลิปในแชทนี้ได้เลย', account: 'เลขบัญชี', name: 'ชื่อบัญชี', none: 'ไม่มียอดที่ต้องชำระ',
     cash: 'ชำระเงินสดตอนรับเครื่องดื่ม', later: 'ร้านจะส่งช่องทางชำระเงินให้ในแชทนี้', alt: 'ออเดอร์ ',
   },
   en: {
     order: 'Order', when: 'Time', where: 'Deliver to', subtotal: 'Subtotal', discount: 'Discount', fee: 'Delivery', total: 'Total',
-    baht: ' THB', scan: n => 'Scan to pay ' + n + ' THB with PromptPay, then send the slip in this chat.', none: 'Nothing to pay',
+    baht: ' THB', transfer: n => 'Transfer ' + n + ' THB, then send the slip in this chat.', account: 'Account', name: 'Account name', none: 'Nothing to pay',
     cash: 'Pay cash when you receive your drinks', later: 'We will send payment details in this chat', alt: 'Order ',
   },
 };
@@ -140,9 +158,10 @@ function receiptFlex_(po, s) {
   body.push(kv(L.total, baht(po.total), { weight: 'bold', size: 'lg', color: C.roast }));
 
   const note = (text) => ({ type: 'text', text, size: 'xs', color: C.muted, wrap: true, align: 'center' });
-  const footer = po.pay === 'promptpay' && s.promptpay && po.total > 0
-    ? [{ type: 'image', url: 'https://promptpay.io/' + s.promptpay + '/' + po.total + '.png', size: 'lg', aspectRatio: '1:1' },
-       note(L.scan(po.total))]
+  const bankText = [s.bankName, s.bankAccountName ? L.name + ': ' + s.bankAccountName : '',
+    s.bankAccountNo ? L.account + ': ' + s.bankAccountNo : '', L.transfer(po.total)].filter(Boolean).join('\n');
+  const footer = po.pay !== 'cash' && po.total > 0 && (s.bankAccountNo || s.bankQrUrl)
+    ? (s.bankQrUrl ? [{ type: 'image', url: s.bankQrUrl, size: 'lg', aspectRatio: '1:1' }] : []).concat(note(bankText))
     : [note(po.total <= 0 ? L.none : po.pay === 'cash' ? L.cash : L.later)];
 
   return {

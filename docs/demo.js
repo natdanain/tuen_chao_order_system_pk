@@ -21,7 +21,8 @@ window.DemoApi = (() => {
     enableCodes:true, enableStamps:false, extrasOff:["เพิ่มช็อต","เปลี่ยนเป็นนมโอ๊ต"],
     sweetness:["100%","75%","50%","0%"], sweetRecommended:"75%",
     extras:[["แยกน้ำแข็ง",5],["เพิ่มช็อต",15],["เปลี่ยนเป็นนมโอ๊ต",15]],
-    promptpay:"0812345678", firstOrderPromptPayOnly:true, stampGoal:10, receiptMode:"push", menu,
+    bankName:"ธนาคารกสิกรไทย", bankAccountName:"ตื่นเช้า โฮมคาเฟ่", bankAccountNo:"xxx-x-xxxxx-x",
+    bankQrUrl:"", firstOrderTransferOnly:true, stampGoal:10, receiptMode:"push", menu,
     en:{
       shopSub:"TUEN_CHAO · Home Cafe", closedMessage:"We are not taking orders right now. See you soon!",
       locations:["Supalai City Resort Chaengwattana"], dropOptions:["To my room","Food locker"],

@@ -66,7 +66,9 @@ function publicConfig_(s) {
     dropOptions: s.dropOptions, roomRequiredFor: s.roomRequiredFor,
     enableCodes: s.enableCodes, enableStamps: s.enableStamps, extrasOff: s.extrasOff,
     sweetness: s.sweetness, sweetRecommended: s.sweetRecommended, extras: s.extras,
-    promptpay: s.promptpay, firstOrderPromptPayOnly: s.firstOrderPromptPayOnly,
+    bankName: s.bankName, bankAccountName: s.bankAccountName,
+    bankAccountNo: s.bankAccountNo, bankQrUrl: s.bankQrUrl,
+    firstOrderTransferOnly: s.firstOrderTransferOnly,
     stampGoal: s.stampGoal, receiptMode: s.receiptMode,
     codeBanners: s.enableCodes ? codeBanners_() : [],
     menu: menu_(), days: days_(s),
@@ -176,8 +178,8 @@ function order_(b) {
     const discount = Math.min(subtotal, freeDisc + (code ? code.amount : 0));
     const deliveryFee = mode === 'deliver' ? s.deliveryFee : 0;
     const total = subtotal - discount + deliveryFee;
-    const pay = o.pay === 'cash' ? 'cash' : 'promptpay';
-    if (pay === 'cash' && isFirst && s.firstOrderPromptPayOnly) fail_('ออเดอร์แรกชำระผ่านพร้อมเพย์ก่อนนะคะ', 'Your first order must be paid by PromptPay.');
+    const pay = o.pay === 'cash' ? 'cash' : 'bank';
+    if (pay === 'cash' && isFirst && s.firstOrderTransferOnly) fail_('ออเดอร์แรกชำระผ่านการโอนบัญชีกสิกรก่อนนะคะ', 'Your first order must be paid by KBank transfer.');
 
     const now = new Date();
     const prefix = 'ORD-' + fmt_(now, 'yyyyMMdd') + '-';
@@ -235,7 +237,7 @@ function adminText_(o) {
   return '🛎 ออเดอร์ใหม่ ' + po.no + (o.lang === 'en' ? ' (ลูกค้าใช้ภาษาอังกฤษ)' : '') + '\n' +
     (o.mode === 'deliver' ? 'ส่ง ' : 'รับ ') + po.when + '\n📍 ' + po.where + '\n\n' +
     o.itemsText + '\n\n' +
-    'ยอด ' + o.total + ' บาท · ' + (o.pay === 'cash' ? 'เงินสด' : 'พร้อมเพย์') +
+    'ยอด ' + o.total + ' บาท · ' + (o.pay === 'cash' ? 'เงินสด' : 'โอนบัญชีกสิกร') +
     (o.code ? ' (โค้ด ' + o.code + ' −' + o.discount + ')' : '') + '\n' +
     '👤 ' + o.displayName + ' ' + o.phone +
     (o.note ? '\n📝 ' + o.note : '');
@@ -248,15 +250,23 @@ function onOrderEdit(e) {
     const sh = e.range.getSheet();
     if (sh.getName() !== SHEETS.orders || e.range.getLastRow() < 2) return;
     const t = table_(SHEETS.orders);
-    const col = t.head.indexOf('status') + 1;
-    if (e.range.getColumn() > col || e.range.getLastColumn() < col) return;
+    const statusCol = t.head.indexOf('status') + 1;
+    const paidCol = t.head.indexOf('paid') + 1;
+    const touchesStatus = e.range.getColumn() <= statusCol && e.range.getLastColumn() >= statusCol;
+    const touchesPaid = e.range.getColumn() <= paidCol && e.range.getLastColumn() >= paidCol;
+    if (!touchesStatus && !touchesPaid) return;
     const s = settings_();
     const lock = LockService.getScriptLock();
     lock.waitLock(20000);
     try {
       for (let r = Math.max(2, e.range.getRow()); r <= e.range.getLastRow(); r++) {
         const row = t.rows[r - 2];
-        if (row && str_(row.userId)) handleStatus_(t, row, s);
+        if (!row || !str_(row.userId)) continue;
+        if (touchesPaid && str_(row.pay) !== 'cash' && bool_(row.paid) &&
+            (str_(row.status) === STATUS.NEW || str_(row.status) === STATUS.VERIFYING)) {
+          update_(t, row, { status: STATUS.MAKING });
+        }
+        handleStatus_(t, row, s);
       }
     } finally {
       lock.releaseLock();
@@ -268,7 +278,8 @@ function onOrderEdit(e) {
 
 function handleStatus_(t, r, s) {
   const status = str_(r.status);
-  if (status !== STATUS.READY && status !== STATUS.CANCEL) return;
+  const supported = [STATUS.VERIFYING, STATUS.MAKING, STATUS.READY, STATUS.DELIVERING, STATUS.DONE, STATUS.CANCEL];
+  if (supported.indexOf(status) < 0) return;
   const done = str_(r.notified).split(',').filter(Boolean);
   if (done.indexOf(status) >= 0) return;
   if (status === STATUS.CANCEL) revertOrder_(r, s);
@@ -277,12 +288,27 @@ function handleStatus_(t, r, s) {
   const no = str_(r.orderNo);
   const en = str_(r.lang) === 'en';
   const where = whereText_(r, s, en ? 'en' : 'th');
-  const text = status === STATUS.CANCEL
-    ? (en ? 'Order ' + no + ' has been cancelled. If you have already paid, we will contact you here for a refund.'
-          : 'ออเดอร์ ' + no + ' ถูกยกเลิกแล้ว หากชำระเงินไปแล้ว ร้านจะติดต่อคืนเงินทางแชทนี้นะคะ')
-    : str_(r.mode) === 'pickup'
+  let text;
+  if (status === STATUS.VERIFYING) {
+    text = en ? '🧾 We received the slip for order ' + no + ' and are checking the payment.'
+      : '🧾 ได้รับสลิปของออเดอร์ ' + no + ' แล้วค่ะ กำลังตรวจสอบยอดนะคะ';
+  } else if (status === STATUS.MAKING) {
+    text = en ? '✅ Payment confirmed for order ' + no + '. We are making your drinks now.'
+      : '✅ ยืนยันยอดออเดอร์ ' + no + ' แล้วค่ะ ร้านกำลังทำเครื่องดื่มให้นะคะ';
+  } else if (status === STATUS.READY) {
+    text = str_(r.mode) === 'pickup'
       ? (en ? '☕ Order ' + no + ' is ready. Come and pick it up!' : '☕ ออเดอร์ ' + no + ' พร้อมแล้ว มารับที่ร้านได้เลยค่ะ')
-      : (en ? '☕ Order ' + no + ' is ready and on its way to ' + where + '.' : '☕ ออเดอร์ ' + no + ' พร้อมแล้ว กำลังไปส่งที่ ' + where + ' นะคะ');
+      : (en ? '☕ Order ' + no + ' is ready and waiting for delivery.' : '☕ ออเดอร์ ' + no + ' พร้อมแล้ว กำลังรอจัดส่งค่ะ');
+  } else if (status === STATUS.DELIVERING) {
+    text = en ? '🛵 Order ' + no + ' is on its way to ' + where + '.'
+      : '🛵 ออเดอร์ ' + no + ' กำลังไปส่งที่ ' + where + ' นะคะ';
+  } else if (status === STATUS.DONE) {
+    text = en ? '💛 Order ' + no + ' has been delivered. Thank you for supporting TUEN_CHAO. See you next time!'
+      : '💛 ส่งออเดอร์ ' + no + ' เรียบร้อยแล้ว ขอบคุณที่อุดหนุนตื่นเช้านะคะ แล้วพบกันใหม่ค่ะ';
+  } else {
+    text = en ? 'Order ' + no + ' has been cancelled. If you have already paid, we will contact you here for a refund.'
+      : 'ออเดอร์ ' + no + ' ถูกยกเลิกแล้ว หากชำระเงินไปแล้ว ร้านจะติดต่อคืนเงินทางแชทนี้นะคะ';
+  }
   push_(str_(r.userId), [{ type: 'text', text }]);
 }
 

@@ -2,7 +2,10 @@
 
 const TZ = 'Asia/Bangkok';
 const SHEETS = { menu: 'Menu', settings: 'Settings', codes: 'Codes', customers: 'Customers', orders: 'Orders' };
-const STATUS = { NEW: 'ใหม่', MAKING: 'กำลังทำ', READY: 'พร้อมส่ง', DONE: 'ส่งแล้ว', CANCEL: 'ยกเลิก' };
+const STATUS = {
+  NEW: 'ใหม่', VERIFYING: 'รอตรวจสอบ', MAKING: 'กำลังทำ', READY: 'พร้อมส่ง',
+  DELIVERING: 'กำลังส่ง', DONE: 'ส่งแล้ว', CANCEL: 'ยกเลิก',
+};
 
 function table_(name) {
   const sh = SpreadsheetApp.getActive().getSheetByName(name);
@@ -93,8 +96,11 @@ function settings_() {
     sweetness: list_(raw.sweetness, '|'),
     sweetRecommended: str_(raw.sweetRecommended),
     extras: list_(raw.extras, '|').map(x => { const [name, p] = x.split('='); return [name.trim(), Number(p) || 0]; }),
-    promptpay: str_(raw.promptpay).replace(/\D/g, ''),
-    firstOrderPromptPayOnly: bool_(raw.firstOrderPromptPayOnly),
+    bankName: str_(raw.bankName) || 'ธนาคารกสิกรไทย',
+    bankAccountName: str_(raw.bankAccountName),
+    bankAccountNo: str_(raw.bankAccountNo),
+    bankQrUrl: /^https:\/\//i.test(str_(raw.bankQrUrl)) ? str_(raw.bankQrUrl) : '',
+    firstOrderTransferOnly: bool_(raw.firstOrderTransferOnly),
     stampGoal: Math.max(1, n('stampGoal', 10)),
     receiptMode: str_(raw.receiptMode) === 'reply' ? 'reply' : 'push',
     adminTo: str_(raw.adminTo),

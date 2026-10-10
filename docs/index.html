@@ -215,7 +215,7 @@ const T = {
     contactTitle:"ติดต่อ & ชำระเงิน", phone:"เบอร์โทร", phoneHint:"ถ้าหาที่ส่งไม่เจอ ร้านจะโทรหาเบอร์นี้",
     code:"โค้ดส่วนลด", codePh:"ใส่โค้ด (ถ้ามี)", codeRemove:"ยกเลิก", codeChecking:"กำลังตรวจ…", codeApply:"ใช้โค้ด", codeEmpty:"กรอกโค้ดก่อนกดใช้",
     stamps:"บัตรสะสมแต้ม", stampLine:(s,g)=>`${s}/${g} แก้ว · ครบ ${g} แก้วรับฟรี 1 แก้ว`, useFree:n=>`ใช้สิทธิ์แก้วฟรี (มี ${n} สิทธิ์)`, useFreeHint:"ฟรีแก้วที่แพงที่สุด",
-    pay:"ชำระเงิน", promptpay:"โอนพร้อมเพย์", cash:"เงินสดปลายทาง", cashLocked:"ออเดอร์แรกชำระผ่านพร้อมเพย์ก่อน ครั้งถัดไปเลือกเงินสดปลายทางได้", payBoth:"เลือกได้ทั้งสองแบบ",
+    pay:"ชำระเงิน", bankTransfer:"โอนบัญชีกสิกร", cash:"เงินสดปลายทาง", cashLocked:"ออเดอร์แรกชำระผ่านการโอนบัญชีกสิกรก่อน ครั้งถัดไปเลือกเงินสดปลายทางได้", payBoth:"เลือกได้ทั้งสองแบบ",
     note:"ฝากถึงร้าน", optional:"ไม่บังคับ",
     summary:"สรุปรายการ", empty:"ยังไม่มีเครื่องดื่มในตะกร้า กด + ที่เมนูด้านบน", less:"ลด", more:"เพิ่ม",
     sumDeliver:"ส่ง", sumPickup:"รับ", asapShort:"เร็วที่สุด", noSlot:"ยังไม่เลือกรอบ", where:"สถานที่",
@@ -228,7 +228,7 @@ const T = {
     extras:"เพิ่มเติม", itemNote:"หมายเหตุถึงร้าน", itemNotePh:"เช่น น้ำแข็งน้อย", cancel:"ยกเลิก", addCart:"ใส่ตะกร้า",
     thanks:"ขอบคุณที่สั่งนะคะ ☕ ร้านได้รับออเดอร์แล้ว ใบสั่งซื้อส่งเข้าแชท LINE ของร้านด้วย",
     order:"ใบสั่งซื้อ", when:"รอบ", subtotal:"ยอดรวม", baht:n=>`${n} บาท`,
-    scan:n=>`สแกนจ่ายพร้อมเพย์ ${n} บาท<br>แล้วส่งสลิปในแชทร้านได้เลย`, qrAlt:n=>`QR พร้อมเพย์ ${n} บาท`,
+    transfer:n=>`โอนยอด <b>${n} บาท</b><br>แล้วส่งสลิปในแชทร้านได้เลย`, bank:"ธนาคาร", accountName:"ชื่อบัญชี", accountNo:"เลขบัญชี", qrAlt:n=>`QR ชำระเงิน ${n} บาท`,
     nothingToPay:"ไม่มียอดที่ต้องชำระ", cashPay:"ชำระเงินสดตอนรับเครื่องดื่ม", payLater:"ร้านจะส่งช่องทางชำระเงินให้ในแชท",
     stampDone:(s,g)=>`บัตรสะสมแต้ม: ${s}/${g} แก้ว`, freeLeft:n=>`· 🎁 มีสิทธิ์แก้วฟรี ${n} แก้ว`, collect:g=>`ครบ ${g} แก้วรับฟรี 1 แก้ว`,
     backChat:"กลับไปที่แชท", again:"สั่งอีกรอบ", confirmMsg:no=>`ยืนยันออเดอร์ ${no}`,
@@ -254,7 +254,7 @@ const T = {
     contactTitle:"Contact & payment", phone:"Phone", phoneHint:"We'll call this number if we can't find you",
     code:"Discount code", codePh:"Enter a code (optional)", codeRemove:"Remove", codeChecking:"Checking…", codeApply:"Apply", codeEmpty:"Enter a code first",
     stamps:"Stamp card", stampLine:(s,g)=>`${s}/${g} · collect ${g} for 1 free drink`, useFree:n=>`Use a free drink (${n} left)`, useFreeHint:"Your most expensive drink is free",
-    pay:"Payment", promptpay:"PromptPay transfer", cash:"Cash on delivery", cashLocked:"Please pay your first order by PromptPay. Cash is available from your next order.", payBoth:"Either option is fine",
+    pay:"Payment", bankTransfer:"KBank transfer", cash:"Cash on delivery", cashLocked:"Please pay your first order by KBank transfer. Cash is available from your next order.", payBoth:"Either option is fine",
     note:"Note to the shop", optional:"Optional",
     summary:"Order summary", empty:"Your cart is empty. Tap + on a drink above.", less:"Less", more:"More",
     sumDeliver:"Delivery", sumPickup:"Pick-up", asapShort:"As soon as ready", noSlot:"No time chosen", where:"Deliver to",
@@ -267,7 +267,7 @@ const T = {
     extras:"Extras", itemNote:"Note", itemNotePh:"e.g. less ice", cancel:"Cancel", addCart:"Add to cart",
     thanks:"Thank you ☕ We've got your order. A receipt has also been sent to our LINE chat.",
     order:"Order", when:"Time", subtotal:"Subtotal", baht:n=>`${n} THB`,
-    scan:n=>`Scan to pay ${n} THB with PromptPay<br>then send the slip in our chat`, qrAlt:n=>`PromptPay QR ${n} THB`,
+    transfer:n=>`Transfer <b>${n} THB</b><br>then send the slip in our chat`, bank:"Bank", accountName:"Account name", accountNo:"Account", qrAlt:n=>`Payment QR ${n} THB`,
     nothingToPay:"Nothing to pay", cashPay:"Pay cash when you receive your drinks", payLater:"We'll send payment details in the chat",
     stampDone:(s,g)=>`Stamp card: ${s}/${g}`, freeLeft:n=>`· 🎁 ${n} free drink(s)`, collect:g=>`Collect ${g} for 1 free drink`,
     backChat:"Back to chat", again:"Order again", confirmMsg:no=>`Confirm order ${no}`,
@@ -304,7 +304,7 @@ const slotNote = x=>!x.open ? t(x.reason==="full"?"slotFull":x.reason==="preorde
 
 const S = {
   mode:"deliver", day:0, slot:null, loc:"", drop:"", floor:"", room:"", locNote:"", phone:"", note:"",
-  code:"", applied:null, codeErr:"", codeBusy:false, pay:"promptpay", useFree:false,
+  code:"", applied:null, codeErr:"", codeBusy:false, pay:"bank", useFree:false,
   cart:[], tab:"round", sheet:null, done:null, busy:false, err:"",
   popup:null,   // list of missing fields shown after tapping "order" too early
   tried:false,  // after the first order attempt, outline the fields still missing
@@ -313,6 +313,14 @@ const S = {
 const $ = s=>document.querySelector(s);
 const baht = n=>n.toLocaleString("th-TH")+" ฿";
 const esc = s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const bankPaymentHtml = o=>{
+  if(!C.bankAccountNo && !C.bankQrUrl) return t("payLater");
+  return `${C.bankQrUrl?`<img class="qrimg" src="${esc(C.bankQrUrl)}" alt="${esc(t("qrAlt",o.total))}">`:""}<div>
+    <b>${esc(C.bankName||"ธนาคารกสิกรไทย")}</b><br>
+    ${C.bankAccountName?`${t("accountName")}: ${esc(C.bankAccountName)}<br>`:""}
+    ${C.bankAccountNo?`${t("accountNo")}: <b>${esc(C.bankAccountNo)}</b><br>`:""}
+    ${t("transfer",o.total)}</div>`;
+};
 const glass = m=>{
   if(m.img) return `<div class="glassbox"><img src="${esc(m.img)}" alt="" loading="lazy"></div>`;
   let b=0; return `<div class="glassbox"><div class="glass">${m.layers.map(([c,h])=>{const s=`<i style="background:${esc(c)};bottom:${b}%;height:${h}%"></i>`;b+=h;return s}).join("")}</div></div>`;
@@ -334,7 +342,7 @@ const fee = ()=>S.mode==="deliver"? C.deliveryFee : 0;
 const total = ()=>Math.max(0, subtotal()-discount()+fee());
 const count = ()=>S.cart.reduce((a,l)=>a+l.qty,0);
 const firstOrder = ()=>!S.cust.orders;
-const cashLocked = ()=>C.firstOrderPromptPayOnly && firstOrder();
+const cashLocked = ()=>C.firstOrderTransferOnly && firstOrder();
 const phoneOk = ()=>/^0\d{8,9}$/.test(S.phone.replace(/\D/g,""));
 const dayOpen = d=>d.asap? d.open : d.slots.some(x=>x.open);
 const roomRequired = ()=>S.mode==="deliver" && C.roomRequiredFor.includes(S.drop);
@@ -493,7 +501,7 @@ function render(){
       ${S.cust.freeCups>0?`<label class="opt"><input type="checkbox" id="useFree" ${S.useFree?'checked':''}> ${t("useFree", S.cust.freeCups)}<span class="p">${t("useFreeHint")}</span></label>`:''}
     </div>`:''}
     <label class="f">${t("pay")}</label>
-    <div class="pay"><button data-pay="promptpay" class="${S.pay==='promptpay'?'on':''}">${t("promptpay")}</button><button data-pay="cash" class="${S.pay==='cash'?'on':''}" ${cashLocked()?'disabled':''}>${t("cash")}</button></div>
+    <div class="pay"><button data-pay="bank" class="${S.pay==='bank'?'on':''}">${t("bankTransfer")}</button><button data-pay="cash" class="${S.pay==='cash'?'on':''}" ${cashLocked()?'disabled':''}>${t("cash")}</button></div>
     <p class="hint">${cashLocked()?t("cashLocked"):t("payBoth")}</p>
     <label class="f" for="note">${t("note")}</label>
     <textarea id="note" maxlength="300" placeholder="${t("optional")}">${esc(S.note)}</textarea>
@@ -661,7 +669,6 @@ async function sendConfirm(no){
 // The order text (when / where / item names) comes from the backend in the language used when ordering.
 function renderDone(){
   const o=S.done;
-  const qr = o.pay==="promptpay" && C.promptpay && o.total>0;
   $("#app").innerHTML = `<div class="chat">
     <div class="chathead"><div class="logo">${logoSvg()}</div><b>${esc(C.shopName)}</b></div>
     <div class="msg">${t("thanks")}</div>
@@ -678,9 +685,7 @@ function renderDone(){
         ${o.deliveryFee?`<div class="kv"><span>${t("fee")}</span><span>${t("baht", o.deliveryFee)}</span></div>`:''}
         <div class="kv total"><span>${t("total")}</span><span>${t("baht", o.total)}</span></div>
       </div>
-      <div class="ft">${qr
-        ?`<div class="qr"><img class="qrimg" src="https://promptpay.io/${esc(C.promptpay)}/${o.total}.png" alt="${esc(t("qrAlt", o.total))}"><div>${t("scan", o.total)}</div></div>`
-        :`<div class="qr">${o.total<=0?t("nothingToPay"):o.pay==='cash'?t("cashPay"):t("payLater")}</div>`}</div>
+      <div class="ft"><div class="qr">${o.total<=0?t("nothingToPay"):o.pay==='cash'?t("cashPay"):bankPaymentHtml(o)}</div></div>
     </div>
     ${C.enableStamps?`<div class="msg">${t("stampDone", S.cust.stamps, C.stampGoal)} ${S.cust.freeCups?t("freeLeft", S.cust.freeCups):t("collect", C.stampGoal)}
       ${stampDots()}</div>`:''}
@@ -689,7 +694,7 @@ function renderDone(){
   </div>`;
   const cl=$("#close"); if(cl) cl.onclick=()=>liff.closeWindow();
   $("#again").onclick=async()=>{
-    Object.assign(S,{done:null,cart:[],applied:null,code:"",codeErr:"",useFree:false,pay:"promptpay",note:"",slot:null,err:"",floor:"",room:"",locNote:"",tried:false});
+    Object.assign(S,{done:null,cart:[],applied:null,code:"",codeErr:"",useFree:false,pay:"bank",note:"",slot:null,err:"",floor:"",room:"",locNote:"",tried:false});
     render();
     try{ const r=await api("init"); applyConfig(r.config); S.cust={...S.cust,...r.customer}; render(); }catch(_){}
   };
