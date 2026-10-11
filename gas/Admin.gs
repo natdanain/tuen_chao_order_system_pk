@@ -54,7 +54,7 @@ function adminListOrders_(body) {
 
 function adminOrdersFor_(date, status) {
   return table_(SHEETS.orders).rows
-    .filter(r => (!date || str_(r.date) === date) && (!status || str_(r.status) === status))
+    .filter(r => (!date || str_(r.date) === date) && (!status || normalizeStatus_(r.status) === status))
     .sort((a, b) => orderTime_(b) - orderTime_(a))
     .slice(0, 200)
     .map(adminOrderView_);
@@ -70,7 +70,7 @@ function adminOrderView_(r) {
   return {
     orderNo: str_(r.orderNo),
     createdAt: r.createdAt instanceof Date ? fmt_(r.createdAt, "yyyy-MM-dd'T'HH:mm:ss") : str_(r.createdAt),
-    status: str_(r.status), paid: bool_(r.paid), date: str_(r.date), slot: str_(r.slot),
+    status: normalizeStatus_(r.status), paid: bool_(r.paid), date: str_(r.date), slot: str_(r.slot),
     mode: str_(r.mode), location: str_(r.location), drop: str_(r.drop), locNote: str_(r.locNote),
     displayName: str_(r.displayName), phone: str_(r.phone), cups: num_(r.cups),
     subtotal: num_(r.subtotal), discount: num_(r.discount), deliveryFee: num_(r.deliveryFee),
@@ -87,8 +87,7 @@ function dashboard_(orders, s) {
   return {
     acceptingOrders: s.acceptingOrders,
     total: orders.filter(o => o.status !== STATUS.CANCEL).length,
-    newOrders: count(STATUS.NEW), verifying: count(STATUS.VERIFYING), making: count(STATUS.MAKING),
-    ready: count(STATUS.READY), delivering: count(STATUS.DELIVERING),
+    verifying: count(STATUS.VERIFYING), making: count(STATUS.MAKING), delivering: count(STATUS.DELIVERING),
     unpaid: orders.filter(o => o.pay !== 'cash' && !o.paid && o.status !== STATUS.CANCEL).length,
   };
 }
@@ -141,7 +140,7 @@ function adminSetPaid_(body) {
     const before = { status: str_(row.status), paid: bool_(row.paid) };
     const patch = { paid };
     if (paid && str_(row.pay) !== 'cash' &&
-        (before.status === STATUS.NEW || before.status === STATUS.VERIFYING)) patch.status = STATUS.MAKING;
+        (before.status === LEGACY_STATUS.NEW || before.status === STATUS.VERIFYING)) patch.status = STATUS.MAKING;
     update_(t, row, patch);
     if (patch.status) {
       try { handleStatus_(t, row, settings_()); } catch (e) { warning = 'ยืนยันยอดแล้ว แต่ส่ง LINE ไม่สำเร็จ'; console.error(e); }

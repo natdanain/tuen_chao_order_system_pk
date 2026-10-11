@@ -98,11 +98,13 @@ function sendReceipt_(orderNo, userId, replyToken) {
   if (!r) return false;
   if (!replyToken && str_(r.receipt)) return true;
   const lang = str_(r.lang) === 'en' ? 'en' : 'th';
-  const msgs = [receiptFlex_(publicOrder_(r, s, lang), s)];
+  const po = publicOrder_(r, s, lang);
+  const msgs = [receiptFlex_(po, s)];
   if (s.enableStamps) {
     const c = findCustomer_(userId).row;
     msgs.push(stampMsg_(c ? num_(c.stamps) : 0, c ? num_(c.freeCups) : 0, s.stampGoal, lang));
   }
+  if (po.pay !== 'cash' && po.total > 0) msgs.push({ type: 'text', text: RECEIPT_TEXT_[lang].slip(po.no) });
   if (replyToken) reply_(replyToken, msgs); else push_(userId, msgs);
   update_(ot, r, { receipt: replyToken ? 'reply' : 'push' });
   return true;
@@ -123,11 +125,13 @@ const RECEIPT_TEXT_ = {
     order: 'ใบสั่งซื้อ', when: 'รอบ', where: 'สถานที่', subtotal: 'ยอดรวม', discount: 'ส่วนลด', fee: 'ค่าส่ง', total: 'ยอดชำระ',
     baht: ' บาท', transfer: n => 'โอนยอด ' + n + ' บาท แล้วส่งสลิปในแชทนี้ได้เลย', account: 'เลขบัญชี', name: 'ชื่อบัญชี', none: 'ไม่มียอดที่ต้องชำระ',
     cash: 'ชำระเงินสดตอนรับเครื่องดื่ม', later: 'ร้านจะส่งช่องทางชำระเงินให้ในแชทนี้', alt: 'ออเดอร์ ',
+    slip: n => 'กรุณาแนบสลิปการโอนเงินในแชทนี้ เพื่อยืนยันออเดอร์ ' + n + ' นะคะ 🙏',
   },
   en: {
     order: 'Order', when: 'Time', where: 'Deliver to', subtotal: 'Subtotal', discount: 'Discount', fee: 'Delivery', total: 'Total',
     baht: ' THB', transfer: n => 'Transfer ' + n + ' THB, then send the slip in this chat.', account: 'Account', name: 'Account name', none: 'Nothing to pay',
     cash: 'Pay cash when you receive your drinks', later: 'We will send payment details in this chat', alt: 'Order ',
+    slip: n => 'Please attach your payment slip in this chat to confirm order ' + n + ' 🙏',
   },
 };
 
@@ -161,7 +165,7 @@ function receiptFlex_(po, s) {
   const bankText = [s.bankName, s.bankAccountName ? L.name + ': ' + s.bankAccountName : '',
     s.bankAccountNo ? L.account + ': ' + s.bankAccountNo : '', L.transfer(po.total)].filter(Boolean).join('\n');
   const footer = po.pay !== 'cash' && po.total > 0 && (s.bankAccountNo || s.bankQrUrl)
-    ? (s.bankQrUrl ? [{ type: 'image', url: s.bankQrUrl, size: 'lg', aspectRatio: '1:1' }] : []).concat(note(bankText))
+    ? (s.bankQrUrl ? [{ type: 'image', url: s.bankQrUrl, size: 'lg', aspectRatio: '1:1', aspectMode: 'fit' }] : []).concat(note(bankText))
     : [note(po.total <= 0 ? L.none : po.pay === 'cash' ? L.cash : L.later)];
 
   return {

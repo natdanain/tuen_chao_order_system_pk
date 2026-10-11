@@ -6,9 +6,20 @@ const SHEETS = {
   admins: 'Admins', audit: 'AuditLog',
 };
 const STATUS = {
-  NEW: 'ใหม่', VERIFYING: 'รอตรวจสอบ', MAKING: 'กำลังทำ', READY: 'พร้อมส่ง',
+  VERIFYING: 'รอตรวจสอบ', MAKING: 'กำลังทำ',
   DELIVERING: 'กำลังส่ง', DONE: 'ส่งแล้ว', CANCEL: 'ยกเลิก',
 };
+const LEGACY_STATUS = { NEW: 'ใหม่', READY: 'พร้อมส่ง' };
+
+// Keep historical orders readable after simplifying the kitchen workflow.
+// "ใหม่" is now "รอตรวจสอบ"; an old "พร้อมส่ง" remains in the making queue
+// until staff explicitly starts delivery.
+function normalizeStatus_(value) {
+  const status = str_(value);
+  if (status === LEGACY_STATUS.NEW) return STATUS.VERIFYING;
+  if (status === LEGACY_STATUS.READY) return STATUS.MAKING;
+  return status;
+}
 
 function table_(name) {
   const sh = SpreadsheetApp.getActive().getSheetByName(name);
@@ -106,7 +117,6 @@ function settings_() {
     bankAccountName: str_(raw.bankAccountName),
     bankAccountNo: str_(raw.bankAccountNo),
     bankQrUrl: /^https:\/\//i.test(str_(raw.bankQrUrl)) ? str_(raw.bankQrUrl) : '',
-    firstOrderTransferOnly: bool_(raw.firstOrderTransferOnly),
     stampGoal: Math.max(1, n('stampGoal', 10)),
     receiptMode: str_(raw.receiptMode) === 'reply' ? 'reply' : 'push',
     adminTo: str_(raw.adminTo),

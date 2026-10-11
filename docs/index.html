@@ -99,7 +99,7 @@ textarea{resize:vertical;min-height:64px}
 .pay{display:flex;gap:8px;flex-wrap:wrap}
 .pay button{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:8px 16px;font-size:14px}
 .pay button.on{background:var(--roast);color:var(--bg);border-color:var(--roast)}
-.pay button:disabled{opacity:.45;cursor:not-allowed}
+.pay button:disabled,.pay button.locked{opacity:.45;cursor:not-allowed}
 .code{display:flex;gap:8px}
 .code input{flex:1;min-width:0;text-transform:uppercase}
 .code button{border:0;border-radius:12px;background:var(--roast);color:var(--bg);padding:0 16px;white-space:nowrap}
@@ -220,7 +220,7 @@ const T = {
     contactTitle:"ติดต่อ & ชำระเงิน", phone:"เบอร์โทร", phoneHint:"ถ้าหาที่ส่งไม่เจอ ร้านจะโทรหาเบอร์นี้",
     code:"โค้ดส่วนลด", codePh:"ใส่โค้ด (ถ้ามี)", codeRemove:"ยกเลิก", codeChecking:"กำลังตรวจ…", codeApply:"ใช้โค้ด", codeEmpty:"กรอกโค้ดก่อนกดใช้",
     stamps:"บัตรสะสมแต้ม", stampLine:(s,g)=>`${s}/${g} แก้ว · ครบ ${g} แก้วรับฟรี 1 แก้ว`, useFree:n=>`ใช้สิทธิ์แก้วฟรี (มี ${n} สิทธิ์)`, useFreeHint:"ฟรีแก้วที่แพงที่สุด",
-    pay:"ชำระเงิน", bankTransfer:"โอนบัญชีกสิกร", cash:"เงินสดปลายทาง", cashLocked:"ออเดอร์แรกชำระผ่านการโอนบัญชีกสิกรก่อน ครั้งถัดไปเลือกเงินสดปลายทางได้", payBoth:"เลือกได้ทั้งสองแบบ",
+    pay:"ชำระเงิน", bankTransfer:"จ่ายเงินด้วย QR Code", cash:"เงินสดปลายทาง", cashLocked:"ตอนนี้ชำระได้ด้วย QR Code เท่านั้น", cashOffTitle:"เก็บเงินปลายทางยังไม่พร้อมให้ใช้งาน", cashOffMsg:"กรุณาชำระเงินด้วย QR Code", payBoth:"เลือกได้ทั้งสองแบบ",
     note:"ฝากถึงร้าน", optional:"ไม่บังคับ",
     summary:"สรุปรายการ", empty:"ยังไม่มีเครื่องดื่มในตะกร้า กด + ที่เมนูด้านบน", less:"ลด", more:"เพิ่ม",
     sumDeliver:"ส่ง", sumPickup:"รับ", asapShort:"เร็วที่สุด", noSlot:"ยังไม่เลือกรอบ", where:"สถานที่",
@@ -260,7 +260,7 @@ const T = {
     contactTitle:"Contact & payment", phone:"Phone", phoneHint:"We'll call this number if we can't find you",
     code:"Discount code", codePh:"Enter a code (optional)", codeRemove:"Remove", codeChecking:"Checking…", codeApply:"Apply", codeEmpty:"Enter a code first",
     stamps:"Stamp card", stampLine:(s,g)=>`${s}/${g} · collect ${g} for 1 free drink`, useFree:n=>`Use a free drink (${n} left)`, useFreeHint:"Your most expensive drink is free",
-    pay:"Payment", bankTransfer:"KBank transfer", cash:"Cash on delivery", cashLocked:"Please pay your first order by KBank transfer. Cash is available from your next order.", payBoth:"Either option is fine",
+    pay:"Payment", bankTransfer:"Pay by QR code", cash:"Cash on delivery", cashLocked:"Payment is by QR code only for now", cashOffTitle:"Cash on delivery isn't available yet", cashOffMsg:"Please pay by QR code", payBoth:"Either option is fine",
     note:"Note to the shop", optional:"Optional",
     summary:"Order summary", empty:"Your cart is empty. Tap + on a drink above.", less:"Less", more:"More",
     sumDeliver:"Delivery", sumPickup:"Pick-up", asapShort:"As soon as ready", noSlot:"No time chosen", where:"Deliver to",
@@ -348,8 +348,7 @@ const discount = ()=>Math.min(subtotal(), freeDisc() + codeDisc());
 const fee = ()=>S.mode==="deliver"? C.deliveryFee : 0;
 const total = ()=>Math.max(0, subtotal()-discount()+fee());
 const count = ()=>S.cart.reduce((a,l)=>a+l.qty,0);
-const firstOrder = ()=>!S.cust.orders;
-const cashLocked = ()=>C.firstOrderTransferOnly && firstOrder();
+const cashLocked = ()=>!S.cust.allowCash;   // shop ticks Customers → allowCash per customer
 const phoneOk = ()=>/^0\d{8,9}$/.test(S.phone.replace(/\D/g,""));
 const dayOpen = d=>d.asap? d.open : d.slots.some(x=>x.open);
 const roomRequired = ()=>S.mode==="deliver" && C.roomRequiredFor.includes(S.drop);
@@ -459,6 +458,7 @@ function applyConfig(cfg){
 function applyCustomer(c){
   S.cust = c;
   S.phone = c.phone || "";
+  if(!c.allowCash) S.pay = "bank";
   if(c.lastMode==="pickup" && C.allowPickup) S.mode = "pickup";
   if(C.locations.includes(c.lastLoc)) S.loc = c.lastLoc;
   if(C.dropOptions.includes(c.lastDrop)) S.drop = c.lastDrop;
@@ -533,7 +533,7 @@ function render(){
       ${S.cust.freeCups>0?`<label class="opt"><input type="checkbox" id="useFree" ${S.useFree?'checked':''}> ${t("useFree", S.cust.freeCups)}<span class="p">${t("useFreeHint")}</span></label>`:''}
     </div>`:''}
     <label class="f">${t("pay")}</label>
-    <div class="pay"><button data-pay="bank" class="${S.pay==='bank'?'on':''}">${t("bankTransfer")}</button><button data-pay="cash" class="${S.pay==='cash'?'on':''}" ${cashLocked()?'disabled':''}>${t("cash")}</button></div>
+    <div class="pay"><button data-pay="bank" class="${S.pay==='bank'?'on':''}">${t("bankTransfer")}</button><button data-pay="cash" class="${S.pay==='cash'?'on':''}${cashLocked()?' locked':''}" ${cashLocked()?'aria-disabled="true"':''}>${t("cash")}</button></div>
     <p class="hint">${cashLocked()?t("cashLocked"):t("payBoth")}</p>
     <label class="f" for="note">${t("note")}</label>
     <textarea id="note" maxlength="300" placeholder="${t("optional")}">${esc(S.note)}</textarea>
@@ -574,14 +574,14 @@ function markMissing(){
 }
 function popupHtml(){
   return `<div class="sheet-bg dlg-bg" id="popBg"><div class="dlg" role="alertdialog" aria-labelledby="popT">
-    <h3 id="popT">${t("missTitle")}</h3>
+    <h3 id="popT">${S.popupTitle||t("missTitle")}</h3>
     <ul>${S.popup.map(m=>`<li>${esc(m.msg)}</li>`).join("")}</ul>
     <button class="cta" id="popOk" style="width:100%">${t("ok")}</button>
   </div></div>`;
 }
 function closePopup(){
   const first = S.popup && S.popup[0];
-  S.popup = null; render();
+  S.popup = null; S.popupTitle = ""; render();
   const e = first && first.el && $(first.el);
   if(!e) return;
   e.scrollIntoView({behavior:"smooth", block:"center"});
@@ -625,7 +625,10 @@ function bind(){
   document.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{S.sheet={id:b.dataset.add};render()});
   document.querySelectorAll("[data-inc]").forEach(b=>b.onclick=()=>{S.cart[+b.dataset.inc].qty++;render()});
   document.querySelectorAll("[data-dec]").forEach(b=>b.onclick=()=>{const l=S.cart[+b.dataset.dec];l.qty--;if(!l.qty)S.cart.splice(+b.dataset.dec,1);render()});
-  document.querySelectorAll("[data-pay]").forEach(b=>b.onclick=()=>{S.pay=b.dataset.pay;render()});
+  document.querySelectorAll("[data-pay]").forEach(b=>b.onclick=()=>{
+    if(b.dataset.pay==="cash" && cashLocked()){ S.popupTitle=t("cashOffTitle"); S.popup=[{msg:t("cashOffMsg")}]; return render(); }
+    S.pay=b.dataset.pay; render();
+  });
   $("#lang").onclick=()=>{ setLang(LANG==="th"?"en":"th"); render(); };
   const loc=$("#loc"); if(loc) loc.onchange=()=>{S.loc=loc.value;render()};
   const ln=$("#locNote"); if(ln) ln.oninput=()=>{S.locNote=ln.value;refreshWhere()};

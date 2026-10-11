@@ -82,7 +82,6 @@ function publicConfig_(s) {
     sweetness: s.sweetness, sweetRecommended: s.sweetRecommended, extras: s.extras,
     bankName: s.bankName, bankAccountName: s.bankAccountName,
     bankAccountNo: s.bankAccountNo, bankQrUrl: s.bankQrUrl,
-    firstOrderTransferOnly: s.firstOrderTransferOnly,
     stampGoal: s.stampGoal, receiptMode: s.receiptMode,
     codeBanners: s.enableCodes ? codeBanners_() : [],
     menu: menu_(), days: days_(s),
@@ -100,6 +99,7 @@ function customerView_(c, user) {
     lastLoc: c ? str_(c.lastLoc) : '',
     lastDrop: c ? str_(c.lastDrop) : '',
     lastLocNote: c ? str_(c.lastLocNote) : '',
+    allowCash: c ? bool_(c.allowCash) : false,
   };
 }
 
@@ -193,7 +193,8 @@ function order_(b) {
     const deliveryFee = mode === 'deliver' ? s.deliveryFee : 0;
     const total = subtotal - discount + deliveryFee;
     const pay = o.pay === 'cash' ? 'cash' : 'bank';
-    if (pay === 'cash' && isFirst && s.firstOrderTransferOnly) fail_('ออเดอร์แรกชำระผ่านการโอนบัญชีกสิกรก่อนนะคะ', 'Your first order must be paid by KBank transfer.');
+    // cash on delivery only for customers the shop ticked in Customers → allowCash
+    if (pay === 'cash' && !(c && bool_(c.allowCash))) fail_('เก็บเงินปลายทางยังไม่พร้อมให้ใช้งาน กรุณาชำระด้วย QR Code', 'Cash on delivery is not available yet. Please pay by QR code.');
 
     const now = new Date();
     const prefix = 'ORD-' + fmt_(now, 'yyyyMMdd') + '-';
@@ -204,7 +205,7 @@ function order_(b) {
     const earned = s.enableStamps ? Math.max(0, cups - (useFree ? 1 : 0)) : 0;
 
     order = {
-      orderNo: prefix + String(seq).padStart(3, '0'), createdAt: now, status: STATUS.NEW, paid: false,
+      orderNo: prefix + String(seq).padStart(3, '0'), createdAt: now, status: STATUS.VERIFYING, paid: false,
       date: day.date, slot: slotTime, mode, location: loc, drop, locNote,
       displayName: user.name, phone, itemsText: itemsText_(items), cups,
       subtotal, discount, deliveryFee, total, pay, code: code ? code.code : '', usedFreeCup: useFree,
@@ -252,7 +253,7 @@ function adminText_(o, s) {
   return '🛎 ออเดอร์ใหม่ ' + po.no + (o.lang === 'en' ? ' (ลูกค้าใช้ภาษาอังกฤษ)' : '') + '\n' +
     (o.mode === 'deliver' ? 'ส่ง ' : 'รับ ') + po.when + '\n📍 ' + po.where + '\n\n' +
     o.itemsText + '\n\n' +
-    'ยอด ' + o.total + ' บาท · ' + (o.pay === 'cash' ? 'เงินสด' : 'โอนบัญชีกสิกร') +
+    'ยอด ' + o.total + ' บาท · ' + (o.pay === 'cash' ? 'เงินสด' : 'QR Code') +
     (o.code ? ' (โค้ด ' + o.code + ' −' + o.discount + ')' : '') + '\n' +
     '👤 ' + o.displayName + ' ' + o.phone +
     (o.note ? '\n📝 ' + o.note : '') +
@@ -279,7 +280,7 @@ function onOrderEdit(e) {
         const row = t.rows[r - 2];
         if (!row || !str_(row.userId)) continue;
         if (touchesPaid && str_(row.pay) !== 'cash' && bool_(row.paid) &&
-            (str_(row.status) === STATUS.NEW || str_(row.status) === STATUS.VERIFYING)) {
+            (str_(row.status) === LEGACY_STATUS.NEW || str_(row.status) === STATUS.VERIFYING)) {
           update_(t, row, { status: STATUS.MAKING });
         }
         handleStatus_(t, row, s);
@@ -294,7 +295,7 @@ function onOrderEdit(e) {
 
 function handleStatus_(t, r, s) {
   const status = str_(r.status);
-  const supported = [STATUS.VERIFYING, STATUS.MAKING, STATUS.READY, STATUS.DELIVERING, STATUS.DONE, STATUS.CANCEL];
+  const supported = [STATUS.VERIFYING, STATUS.MAKING, STATUS.DELIVERING, STATUS.DONE, STATUS.CANCEL];
   if (supported.indexOf(status) < 0) return;
   const done = str_(r.notified).split(',').filter(Boolean);
   if (done.indexOf(status) >= 0) return;
@@ -311,10 +312,6 @@ function handleStatus_(t, r, s) {
   } else if (status === STATUS.MAKING) {
     text = en ? '✅ Payment confirmed for order ' + no + '. We are making your drinks now.'
       : '✅ ยืนยันยอดออเดอร์ ' + no + ' แล้วค่ะ ร้านกำลังทำเครื่องดื่มให้นะคะ';
-  } else if (status === STATUS.READY) {
-    text = str_(r.mode) === 'pickup'
-      ? (en ? '☕ Order ' + no + ' is ready. Come and pick it up!' : '☕ ออเดอร์ ' + no + ' พร้อมแล้ว มารับที่ร้านได้เลยค่ะ')
-      : (en ? '☕ Order ' + no + ' is ready and waiting for delivery.' : '☕ ออเดอร์ ' + no + ' พร้อมแล้ว กำลังรอจัดส่งค่ะ');
   } else if (status === STATUS.DELIVERING) {
     text = en ? '🛵 Order ' + no + ' is on its way to ' + where + '.'
       : '🛵 ออเดอร์ ' + no + ' กำลังไปส่งที่ ' + where + ' นะคะ';

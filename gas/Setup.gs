@@ -5,7 +5,7 @@ const HEADERS = {
   Settings: ['key', 'value', 'note'],
   Codes: ['code', 'amount', 'label', 'newCustomerOnly', 'maxUses', 'used', 'active',
     'labelEn', 'minCups', 'startDate', 'endDate', 'perCustomer', 'banner'],
-  Customers: ['userId', 'displayName', 'phone', 'orders', 'stamps', 'freeCups', 'lastMode', 'lastLoc', 'lastDrop', 'lastLocNote', 'firstOrderAt', 'lastOrderAt'],
+  Customers: ['userId', 'displayName', 'phone', 'orders', 'stamps', 'freeCups', 'lastMode', 'lastLoc', 'lastDrop', 'lastLocNote', 'firstOrderAt', 'lastOrderAt', 'allowCash'],
   Orders: ['orderNo', 'createdAt', 'status', 'paid', 'date', 'slot', 'mode', 'location', 'drop', 'locNote', 'displayName', 'phone',
     'itemsText', 'cups', 'subtotal', 'discount', 'deliveryFee', 'total', 'pay', 'code', 'usedFreeCup', 'note',
     'stampsEarned', 'items', 'userId', 'receipt', 'notified', 'lang'],
@@ -43,12 +43,11 @@ const DEFAULT_SETTINGS = [
   ['bankAccountName', '', 'ชื่อบัญชีธนาคารกสิกรไทย'],
   ['bankAccountNo', '', 'เลขบัญชีธนาคารกสิกรไทย ใส่ขีดได้'],
   ['bankQrUrl', '', 'ลิงก์ https ของรูป QR ธนาคาร (ไม่บังคับ)'],
-  ['firstOrderTransferOnly', 'TRUE', 'TRUE = ออเดอร์แรกต้องโอนบัญชีก่อน'],
   ['stampGoal', '10', 'สะสมครบกี่แก้วได้ฟรี 1 แก้ว'],
   ['receiptMode', 'push', 'push = ร้านส่งใบเสร็จเอง (ใช้โควตาข้อความ) / reply = ตอบกลับฟรี (ต้องตั้ง webhook)'],
   ['adminTo', '', 'userId/groupId ที่รับแจ้งเตือน หลายปลายทางคั่นด้วย | (เว้นว่าง = ไม่แจ้ง)'],
   ['adminLiffUrl', 'https://liff.line.me/2011923710-OxWMZaO8', 'ลิงก์เปิดหน้าแอดมินจากข้อความแจ้งออเดอร์ใหม่'],
-  ['notifyCustomerOnStatus', 'TRUE', 'แจ้งลูกค้าเมื่อร้านรับยอด กำลังทำ พร้อมส่ง กำลังส่ง ส่งแล้ว หรือยกเลิก'],
+  ['notifyCustomerOnStatus', 'TRUE', 'แจ้งลูกค้าเมื่อร้านรับยอด กำลังทำ กำลังส่ง ส่งแล้ว หรือยกเลิก'],
   // English display text — lists must be in the same order as the Thai ones
   ['shopSubEn', 'TUEN_CHAO · Home Cafe', 'คำโปรยภาษาอังกฤษ'],
   ['closedMessageEn', 'We are not taking orders right now. See you soon!', 'ข้อความตอนปิดรับ (อังกฤษ)'],
@@ -102,6 +101,7 @@ function setup() {
   addMissingCodes_();
   checkboxes_(SHEETS.orders, ['paid']);
   checkboxes_(SHEETS.admins, ['active']);
+  checkboxes_(SHEETS.customers, ['allowCash']);
   const ot = ss.getSheetByName(SHEETS.orders);
   ot.getRange(2, HEADERS.Orders.indexOf('status') + 1, ot.getMaxRows() - 1).setDataValidation(
     SpreadsheetApp.newDataValidation().requireValueInList(Object.keys(STATUS).map(k => STATUS[k]), true).build());

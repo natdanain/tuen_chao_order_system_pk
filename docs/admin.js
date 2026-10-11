@@ -3,7 +3,7 @@ const DEMO = new URLSearchParams(location.search).has("demo");
 const $ = (q, el=document) => el.querySelector(q);
 const esc = v => String(v == null ? "" : v).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const S = { tab:"dashboard", data:null, idToken:"", date:new Date().toISOString().slice(0,10), status:"", busy:false, modal:null, poll:null };
-const STATUS = ["ใหม่","รอตรวจสอบ","กำลังทำ","พร้อมส่ง","กำลังส่ง","ส่งแล้ว","ยกเลิก"];
+const STATUS = ["รอตรวจสอบ","กำลังทำ","กำลังส่ง","ส่งแล้ว","ยกเลิก"];
 
 async function api(action, data={}){
   if(DEMO) return window.AdminDemoApi(action,data);
@@ -67,7 +67,7 @@ function pageHead(title,extra=""){ return `<div class="pagehead"><h2>${title}</h
 function dashboardPage(){
   const d=S.data.dashboard;
   return `${pageHead("ภาพรวมวันนี้")}<div class="stats">
-    ${stat("ออเดอร์ทั้งหมด",d.total)}${stat("ออเดอร์ใหม่",d.newOrders,"hot")}${stat("กำลังทำ",d.making)}${stat("พร้อมส่ง",d.ready,"good")}${stat("รอตรวจยอด",d.unpaid,"hot")}
+    ${stat("ออเดอร์ทั้งหมด",d.total)}${stat("รอตรวจสอบ",d.verifying,"hot")}${stat("กำลังทำ",d.making)}${stat("กำลังส่ง",d.delivering,"good")}${stat("ยังไม่รับเงิน",d.unpaid,"hot")}
   </div><div class="panel"><div class="switchrow"><div><h3>${d.acceptingOrders?"ร้านเปิดรับออเดอร์":"ร้านปิดรับออเดอร์"}</h3><small>${isOwner()?"ลูกค้าจะเห็นสถานะนี้ทันทีเมื่อเปิดหน้าใหม่":"เฉพาะ OWNER เท่านั้นที่เปลี่ยนได้"}</small></div><label class="switch"><input id="shop-open" type="checkbox" ${d.acceptingOrders?"checked":""} ${isOwner()?"":"disabled"}><i></i></label></div></div>
   <div class="panel"><h3>งานที่ต้องดู</h3><p>รอตรวจสอบสลิป <b>${d.verifying}</b> ออเดอร์ · กำลังส่ง <b>${d.delivering}</b> ออเดอร์</p><p class="hint">ข้อมูลรีเฟรชอัตโนมัติทุก 15 วินาที · ล่าสุด ${esc((S.data.serverTime||"").slice(11))}</p></div>`;
 }
@@ -79,8 +79,8 @@ function ordersPage(){
 }
 function orderCard(o){
   const where=o.mode==="pickup"?"รับที่ร้าน":[o.location,o.drop,o.locNote].filter(Boolean).join(" · ");
-  const badge=o.status==="ใหม่"?"new":o.status==="กำลังทำ"?"making":o.status==="ส่งแล้ว"?"done":o.status==="ยกเลิก"?"cancel":"";
-  return `<article class="order" data-order="${esc(o.orderNo)}"><div class="orderhead"><div><h3>${esc(o.orderNo)}</h3><small>${esc(o.slot)} น. · ${esc(o.displayName)} · ${esc(o.phone)}</small></div><span class="badge ${badge}">${esc(o.status)}</span></div><div class="where">📍 ${esc(where)}</div><div class="items">${o.items.map(i=>`<div class="item"><div><b>${i.qty}× ${esc(i.name)}</b><small>${esc([i.sweet,...i.extras,i.note].filter(Boolean).join(" · "))}</small></div><span>${i.total}</span></div>`).join("")}</div>${o.note?`<div class="note">📝 ${esc(o.note)}</div>`:""}<div class="tot"><span>${o.pay==="cash"?"เงินสด":"โอนบัญชีกสิกร"}${o.code?` · ${esc(o.code)}`:""}</span><span>${o.total} บาท</span></div><div class="actions"><select data-status-change ${o.status==="ยกเลิก"?"disabled":""}>${STATUS.map(x=>`<option ${x===o.status?"selected":""}>${x}</option>`).join("")}</select><label class="paid"><input data-paid type="checkbox" ${o.paid?"checked":""} ${o.status==="ยกเลิก"||o.pay==="cash"?"disabled":""}> รับเงินแล้ว</label></div></article>`;
+  const badge=o.status==="รอตรวจสอบ"?"new":o.status==="กำลังทำ"?"making":o.status==="ส่งแล้ว"?"done":o.status==="ยกเลิก"?"cancel":"";
+  return `<article class="order" data-order="${esc(o.orderNo)}"><div class="orderhead"><div><h3>${esc(o.orderNo)}</h3><small>${esc(o.slot)} น. · ${esc(o.displayName)} · ${esc(o.phone)}</small></div><span class="badge ${badge}">${esc(o.status)}</span></div><div class="where">📍 ${esc(where)}</div><div class="items">${o.items.map(i=>`<div class="item"><div><b>${i.qty}× ${esc(i.name)}</b><small>${esc([i.sweet,...i.extras,i.note].filter(Boolean).join(" · "))}</small></div><span>${i.total}</span></div>`).join("")}</div>${o.note?`<div class="note">📝 ${esc(o.note)}</div>`:""}<div class="tot"><span>${o.pay==="cash"?"เงินสด":"QR Code"}${o.code?` · ${esc(o.code)}`:""}</span><span>${o.total} บาท</span></div><div class="actions"><select data-status-change ${o.status==="ยกเลิก"?"disabled":""}>${STATUS.map(x=>`<option ${x===o.status?"selected":""}>${x}</option>`).join("")}</select><label class="paid"><input data-paid type="checkbox" ${o.paid?"checked":""} ${o.status==="ยกเลิก"||o.pay==="cash"?"disabled":""}> รับเงินแล้ว</label></div></article>`;
 }
 
 function menuPage(){
